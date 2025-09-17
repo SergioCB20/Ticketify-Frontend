@@ -5,7 +5,7 @@ export default function Home() {
         <h1 className="text-4xl font-bold text-gray-800 mb-4">¡Hola Tailwind!</h1>
         <p className="text-gray-600 mb-6">Si ves este diseño, Tailwind CSS está funcionando correctamente.</p>
         <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
-          ¡Funciona! 🎉
+          ¡Funciona! 🎉  Hola prueba Josmar
         </button>
       </div>
     </div>
