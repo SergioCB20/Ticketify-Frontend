@@ -12,6 +12,7 @@ declare module 'next-auth' {
     }
     accessToken: string
     refreshToken: string
+    error?: string
   }
 
   interface JWT {
@@ -44,9 +45,7 @@ export const authOptions: NextAuthOptions = {
 
           if (authResponse.user) {
             return {
-              id: authResponse.user.id,
               name: `${authResponse.user.firstName} ${authResponse.user.lastName}`,
-              email: authResponse.user.email,
               image: authResponse.user.avatar,
               ...authResponse.user,
               accessToken: authResponse.accessToken,
@@ -71,7 +70,6 @@ export const authOptions: NextAuthOptions = {
 
   pages: {
     signIn: '/login',
-    signUp: '/register',
     error: '/login',
   },
 

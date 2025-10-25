@@ -1,4 +1,5 @@
 import api, { handleApiError } from '../../lib/api'
+import { toSnakeCaseKeys } from '../../lib/utils'
 import type { 
   AuthResponse, 
   LoginCredentials, 
@@ -20,7 +21,10 @@ export class AuthService {
   // Registro
   static async register(userData: RegisterData): Promise<AuthResponse> {
     try {
-      const response = await api.post<AuthResponse>('/auth/register', userData)
+      // Convertir a snake_case solo para el envío
+      const userDataSnake = toSnakeCaseKeys(userData)
+      console.log('Registering user with data:', userDataSnake) // Log para depuración
+      const response = await api.post<AuthResponse>('/auth/register', userDataSnake)
       console.log('Register response:', response.data) // Log para depuración
       return response.data
     } catch (error) {
