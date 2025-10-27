@@ -1,5 +1,5 @@
 import api, { handleApiError } from '../../lib/api'
-import { toSnakeCaseKeys } from '../../lib/utils'
+import { StorageService } from '../storage'
 import type { 
   AuthResponse, 
   LoginCredentials, 
@@ -11,7 +11,15 @@ export class AuthService {
   // Login
   static async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
+      console.log('Logging in with credentials:', credentials)
       const response = await api.post<AuthResponse>('/auth/login', credentials)
+      const { user, accessToken, refreshToken } = response.data
+      
+      // Guardar tokens y usuario en localStorage
+      StorageService.setAccessToken(accessToken)
+      StorageService.setRefreshToken(refreshToken)
+      StorageService.setUser(user)
+      
       return response.data
     } catch (error) {
       throw handleApiError(error)
@@ -21,11 +29,16 @@ export class AuthService {
   // Registro
   static async register(userData: RegisterData): Promise<AuthResponse> {
     try {
-      // Convertir a snake_case solo para el envío
-      const userDataSnake = toSnakeCaseKeys(userData)
-      console.log('Registering user with data:', userDataSnake) // Log para depuración
-      const response = await api.post<AuthResponse>('/auth/register', userDataSnake)
-      console.log('Register response:', response.data) // Log para depuración
+      console.log('Registering user with data:', userData)
+      const response = await api.post<AuthResponse>('/auth/register', userData)
+      const { user, accessToken, refreshToken } = response.data
+      
+      // Guardar tokens y usuario en localStorage
+      StorageService.setAccessToken(accessToken)
+      StorageService.setRefreshToken(refreshToken)
+      StorageService.setUser(user)
+      
+      console.log('Register response:', response.data)
       return response.data
     } catch (error) {
       throw handleApiError(error)
@@ -36,6 +49,8 @@ export class AuthService {
   static async getProfile(): Promise<User> {
     try {
       const response = await api.get<User>('/auth/profile')
+      // Actualizar usuario en localStorage
+      StorageService.setUser(response.data)
       return response.data
     } catch (error) {
       throw handleApiError(error)
@@ -48,6 +63,13 @@ export class AuthService {
       const response = await api.post<AuthResponse>('/auth/refresh', {
         refreshToken
       })
+      
+      // Actualizar tokens
+      StorageService.setAccessToken(response.data.accessToken)
+      if (response.data.refreshToken) {
+        StorageService.setRefreshToken(response.data.refreshToken)
+      }
+      
       return response.data
     } catch (error) {
       throw handleApiError(error)
@@ -61,16 +83,20 @@ export class AuthService {
     } catch (error) {
       // El logout puede fallar, pero no debería detener el proceso
       console.error('Error during logout:', error)
+    } finally {
+      // Siempre limpiar el storage local
+      StorageService.clearAll()
     }
   }
 
-  // Verificar email
-  static async verifyEmail(token: string): Promise<void> {
-    try {
-      await api.post('/auth/verify-email', { token })
-    } catch (error) {
-      throw handleApiError(error)
-    }
+  // Verificar si el usuario está autenticado
+  static isAuthenticated(): boolean {
+    return !!StorageService.getAccessToken()
+  }
+
+  // Obtener usuario actual del storage
+  static getCurrentUser(): User | null {
+    return StorageService.getUser<User>()
   }
 
   // Solicitar reset de contraseña
@@ -83,9 +109,9 @@ export class AuthService {
   }
 
   // Reset de contraseña
-  static async resetPassword(token: string, password: string): Promise<void> {
+  static async resetPassword(token: string, newPassword: string): Promise<void> {
     try {
-      await api.post('/auth/reset-password', { token, password })
+      await api.post('/auth/reset-password', { token, newPassword })
     } catch (error) {
       throw handleApiError(error)
     }
@@ -97,7 +123,7 @@ export class AuthService {
     newPassword: string
   ): Promise<void> {
     try {
-      await api.put('/auth/change-password', {
+      await api.post('/auth/change-password', {
         currentPassword,
         newPassword
       })
@@ -110,6 +136,8 @@ export class AuthService {
   static async updateProfile(userData: Partial<User>): Promise<User> {
     try {
       const response = await api.put<User>('/auth/profile', userData)
+      // Actualizar usuario en localStorage
+      StorageService.setUser(response.data)
       return response.data
     } catch (error) {
       throw handleApiError(error)
@@ -120,6 +148,8 @@ export class AuthService {
   static async deleteAccount(): Promise<void> {
     try {
       await api.delete('/auth/account')
+      // Limpiar storage
+      StorageService.clearAll()
     } catch (error) {
       throw handleApiError(error)
     }
