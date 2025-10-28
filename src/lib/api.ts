@@ -1,9 +1,9 @@
 import axios from 'axios'
-import { getSession } from 'next-auth/react'
+import { StorageService } from '../services/storage'
 
 // Configuración base de axios
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -13,12 +13,10 @@ export const api = axios.create({
 // Interceptor para agregar el token de autenticación
 api.interceptors.request.use(
   async (config) => {
-    // Si estamos en el cliente, obtenemos la sesión
-    if (typeof window !== 'undefined') {
-      const session = await getSession()
-      if (session?.accessToken) {
-        config.headers.Authorization = `Bearer ${session.accessToken}`
-      }
+    // Obtener token del localStorage
+    const token = StorageService.getAccessToken()
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
     }
     return config
   },
@@ -35,8 +33,33 @@ api.interceptors.response.use(
     
     if (response?.status === 401) {
       // Token expirado o no válido
-      if (typeof window !== 'undefined') {
-        // Redirigir a login o refrescar token
+      const refreshToken = StorageService.getRefreshToken()
+      
+      if (refreshToken && typeof window !== 'undefined') {
+        try {
+          // Intentar refrescar el token
+          const { data } = await axios.post(
+            `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/refresh`,
+            { refreshToken }
+          )
+          
+          // Guardar nuevo token
+          StorageService.setAccessToken(data.accessToken)
+          if (data.refreshToken) {
+            StorageService.setRefreshToken(data.refreshToken)
+          }
+          
+          // Reintentar la petición original
+          error.config.headers.Authorization = `Bearer ${data.accessToken}`
+          return api.request(error.config)
+        } catch (refreshError) {
+          // Si el refresh falla, limpiar todo y redirigir al login
+          StorageService.clearAll()
+          window.location.href = '/login'
+        }
+      } else if (typeof window !== 'undefined') {
+        // No hay refresh token, limpiar y redirigir
+        StorageService.clearAll()
         window.location.href = '/login'
       }
     }
@@ -61,9 +84,10 @@ export interface ApiError {
 // Función helper para manejar errores de la API
 export const handleApiError = (error: any): ApiError => {
   if (error.response?.data) {
+    const errorData = error.response.data
     return {
-      message: error.response.data.message || 'Error en el servidor',
-      errors: error.response.data.errors,
+      message: errorData.detail || errorData.message || 'Error en el servidor',
+      errors: errorData.errors,
       status: error.response.status,
     }
   }

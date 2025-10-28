@@ -1,3 +1,14 @@
+// Convierte las claves de un objeto de camelCase a snake_case (solo primer nivel)
+export function toSnakeCaseKeys<T extends Record<string, any>>(obj: T): Record<string, any> {
+  const result: Record<string, any> = {}
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase()
+      result[snakeKey] = obj[key]
+    }
+  }
+  return result
+}
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
