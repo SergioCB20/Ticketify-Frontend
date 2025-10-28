@@ -4,11 +4,12 @@ export interface User {
   firstName: string
   lastName: string
   email: string
-  role: 'ADMIN' | 'ORGANIZER' | 'CUSTOMER'
+  phoneNumber?: string
+  documentId?: string
+  profilePhoto?: string
   isActive: boolean
-  avatar?: string
   createdAt: string
-  updatedAt: string
+  lastLogin?: string
 }
 
 // Tipos de autenticación
@@ -24,10 +25,19 @@ export interface LoginCredentials {
 }
 
 export interface RegisterData {
-  firstName: string
-  lastName: string
   email: string
   password: string
+  firstName: string
+  lastName: string
+  userType: 'ATTENDEE' | 'ORGANIZER'
+  phoneNumber?: string
+  documentType: 'DNI' | 'CE' | 'Pasaporte'
+  documentId: string
+  country: string
+  city: string
+  gender: 'masculino' | 'femenino' | 'otro' | 'prefiero-no-decir'
+  acceptTerms: boolean
+  acceptMarketing?: boolean
 }
 
 // Tipos de eventos (para referencia futura)
@@ -69,6 +79,12 @@ export interface ApiResponse<T = any> {
   data: T
   message?: string
   errors?: Record<string, string[]>
+}
+
+export interface ApiError {
+  message: string
+  errors?: Record<string, string[]>
+  status?: number
 }
 
 // Tipos de paginación
