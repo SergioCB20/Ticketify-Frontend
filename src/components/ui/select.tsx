@@ -1,23 +1,21 @@
 import React from 'react'
-import { cn } from '../../lib/utils'
+import { cn } from '@/lib/utils'
+import { ChevronDown } from 'lucide-react'
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string
   error?: string
   helperText?: string
-  leftIcon?: React.ReactNode
-  rightIcon?: React.ReactNode
+  options: Array<{ label: string; value: string }>
 }
 
-const Input = React.forwardRef<HTMLInputElement, InputProps>(
+const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
   ({ 
     className, 
-    type = 'text', 
     label, 
     error, 
     helperText, 
-    leftIcon, 
-    rightIcon,
+    options,
     disabled,
     ...props 
   }, ref) => {
@@ -33,28 +31,14 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           </label>
         )}
 
-        {/* Input Container */}
+        {/* Select Container */}
         <div className="relative">
-          {/* Left Icon */}
-          {leftIcon && (
-            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-              {leftIcon}
-            </div>
-          )}
-
-          {/* Input */}
-          <input
-            type={type}
+          <select
             className={cn(
               // Base styles
-              'w-full px-4 py-2.5 rounded-lg border text-base',
-              'transition-all duration-200',
-              'placeholder:text-gray-400',
+              'w-full px-4 py-2.5 pr-10 rounded-lg border text-base appearance-none',
+              'transition-all duration-200 cursor-pointer',
               'focus:outline-none focus:ring-2 focus:ring-offset-0',
-              
-              // Icon padding
-              leftIcon && 'pl-10',
-              rightIcon && 'pr-10',
               
               // States
               !hasError && !disabled && [
@@ -76,14 +60,21 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             disabled={disabled}
             {...props}
-          />
+          >
+            {options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
 
-          {/* Right Icon */}
-          {rightIcon && (
-            <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-              {rightIcon}
-            </div>
-          )}
+          {/* Chevron Icon */}
+          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+            <ChevronDown className={cn(
+              'h-5 w-5',
+              disabled ? 'text-gray-400' : 'text-gray-500'
+            )} />
+          </div>
         </div>
 
         {/* Helper Text or Error */}
@@ -100,7 +91,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
   }
 )
 
-Input.displayName = 'Input'
+Select.displayName = 'Select'
 
-export { Input }
-export type { InputProps }
+export { Select }
+export type { SelectProps }
