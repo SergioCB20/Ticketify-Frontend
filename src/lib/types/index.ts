@@ -106,3 +106,28 @@ export interface EventFilters {
   dateTo?: string
   search?: string
 }
+
+// Tipos de promociones
+export interface Promotion {
+  id: string
+  name: string
+  description?: string
+  code: string
+  promotionType: 'PERCENTAGE' | 'FIXED_AMOUNT' | 'BUY_ONE_GET_ONE' | 'EARLY_BIRD'
+  discountValue: number
+  maxDiscountAmount?: number
+  minPurchaseAmount?: number
+  maxUses?: number
+  maxUsesPerUser?: number
+  currentUses?: number
+  startDate: string
+  endDate: string
+  appliesToAllEvents: boolean
+  appliesToNewUsersOnly: boolean
+  status: 'ACTIVE' | 'INACTIVE' | 'EXPIRED' | 'USED_UP'
+  isPublic: boolean
+  isActive: boolean
+  createdAt?: string
+  updatedAt?: string
+  organizerId?: string
+}
