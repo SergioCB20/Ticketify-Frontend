@@ -1,10 +1,11 @@
+'use client'
 import React from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '../../lib/utils'
 import { Button } from '../ui/button'
 import { Avatar } from '../ui/avatar'
 import { useAuth } from '@/hooks/useAuth'
-import { useRouter } from 'next/navigation'
 
 interface NavbarProps {
   className?: string
@@ -94,10 +95,10 @@ const Navbar: React.FC<NavbarProps> = ({
               </div>
             ) : (
               <div className="hidden md:flex items-center space-x-2">
-                <Button variant="ghost" size="md" onClick={onLogin}>
+                <Button variant="ghost" size="md" onClick={() => router.push('/login')}>
                   Iniciar sesión
                 </Button>
-                <Button variant="primary" size="md" onClick={onRegister}>
+                <Button variant="primary" size="md" onClick={() => router.push('/register')}>
                   Registrarse
                 </Button>
               </div>
