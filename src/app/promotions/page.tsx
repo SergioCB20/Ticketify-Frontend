@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { PromotionService } from '@/services/api/promotions'
 import type { Promotion } from '@/lib/types'
 import { Button } from '@/components/ui/button'
+import { Navbar } from '@/components/layout/navbar'
 
 export default function PromotionsPage() {
   const [promos, setPromos] = useState<Promotion[]>([])
@@ -17,7 +18,7 @@ export default function PromotionsPage() {
       const data = await PromotionService.getAll()
       setPromos(data)
     } catch (err: any) {
-      setError(err.message)
+      setError(err.message || 'Error al cargar las promociones.')
     } finally {
       setLoading(false)
     }
@@ -28,27 +29,50 @@ export default function PromotionsPage() {
   }, [])
 
   return (
-    <div className="p-10">
-      <h1 className="text-3xl font-bold mb-6">🎟️ Promociones</h1>
-      {loading && <p>Cargando promociones...</p>}
-      {error && <p className="text-red-500">{error}</p>}
+    <>
+      {/* ✅ Navbar visible arriba */}
+      <Navbar />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {promos.map((promo) => (
-          <div key={promo.id} className="border rounded-xl p-4 shadow-sm hover:shadow-lg transition">
-            <h2 className="text-xl font-semibold text-violet-600">{promo.name}</h2>
-            <p className="text-gray-600">{promo.description}</p>
-            <p className="text-sm text-gray-500 mt-2">Código: {promo.code}</p>
-            <p className="text-sm text-gray-500">Descuento: {promo.discountValue}</p>
-          </div>
-        ))}
-      </div>
+      <div className="p-10 min-h-screen bg-gray-50">
+        <h1 className="text-4xl font-extrabold text-gray-900 mb-6 flex items-center gap-2">
+          🎟️ Promociones
+        </h1>
 
-      <div className="mt-10">
-        <Button onClick={fetchPromotions} variant="primary">
-          🔄 Recargar Promociones
-        </Button>
+        {loading && <p className="text-gray-600">Cargando promociones...</p>}
+        {error && <p className="text-red-500 font-medium mb-4">{error}</p>}
+
+        {!loading && !error && promos.length === 0 && (
+          <p className="text-gray-500 italic">No hay promociones disponibles.</p>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {promos.map((promo) => (
+            <div
+              key={promo.id}
+              className="border border-gray-200 rounded-xl p-5 bg-white shadow-sm hover:shadow-lg transition-all"
+            >
+              <h2 className="text-xl font-semibold text-violet-600 mb-1">
+                {promo.name}
+              </h2>
+              <p className="text-gray-600 mb-2">{promo.description}</p>
+              <p className="text-sm text-gray-500">Código: <b>{promo.code}</b></p>
+              <p className="text-sm text-gray-500">
+                Descuento: <b>{promo.discountValue}%</b>
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-10">
+          <Button
+            onClick={fetchPromotions}
+            variant="primary"
+            className="px-6 py-3 text-lg font-semibold"
+          >
+            🔄 Recargar Promociones
+          </Button>
+        </div>
       </div>
-    </div>
+    </>
   )
 }

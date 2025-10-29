@@ -11,32 +11,22 @@ interface NavbarProps {
   className?: string
 }
 
-/**
- * Navbar Component
- * Barra de navegación principal con logo, links y autenticación
- */
-const Navbar: React.FC<NavbarProps> = ({ 
-  className 
-}) => {
-  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
-  const router = useRouter();
+const Navbar: React.FC<NavbarProps> = ({ className }) => {
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
+  const router = useRouter()
 
   const navLinks = [
     { href: '/', label: 'Inicio' },
     { href: '/events', label: 'Eventos' },
+    { href: '/promotions', label: 'Promociones' },
     { href: '/about', label: 'Nosotros' },
     { href: '/contact', label: 'Contacto' },
   ]
 
-  const { user, logout } = useAuth();
+  const { user, logout } = useAuth()
 
-  const onLogin = () => {
-    router.push('/login');
-  }
-
-  const onRegister = () => {
-    router.push('/register');
-  }
+  const onLogin = () => router.push('/login')
+  const onRegister = () => router.push('/register')
 
   return (
     <nav className={cn('sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm', className)}>
@@ -45,12 +35,7 @@ const Navbar: React.FC<NavbarProps> = ({
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2 group">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary-500 to-secondary-500 transition-transform group-hover:scale-105">
-              <svg
-                className="h-6 w-6 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
+              <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -95,10 +80,10 @@ const Navbar: React.FC<NavbarProps> = ({
               </div>
             ) : (
               <div className="hidden md:flex items-center space-x-2">
-                <Button variant="ghost" size="md" onClick={() => router.push('/login')}>
+                <Button variant="ghost" size="md" onClick={onLogin}>
                   Iniciar sesión
                 </Button>
-                <Button variant="primary" size="md" onClick={() => router.push('/register')}>
+                <Button variant="primary" size="md" onClick={onRegister}>
                   Registrarse
                 </Button>
               </div>
@@ -110,7 +95,6 @@ const Navbar: React.FC<NavbarProps> = ({
               className="md:hidden inline-flex items-center justify-center p-2 rounded-lg text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
-              <span className="sr-only">Abrir menú</span>
               {mobileMenuOpen ? (
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -138,16 +122,14 @@ const Navbar: React.FC<NavbarProps> = ({
                   {link.label}
                 </Link>
               ))}
-              
+
               <div className="pt-4 border-t border-gray-200">
                 {user ? (
                   <div className="px-4 space-y-3">
-                    <div className="flex items-center space-x-3">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{user.firstName} {user.lastName.slice(0, 1)}</p>
-                        <p className="text-xs text-gray-500">{user.email}</p>
-                      </div>
-                    </div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {user.firstName} {user.lastName.slice(0, 1)}
+                    </p>
+                    <p className="text-xs text-gray-500">{user.email}</p>
                     <Button
                       variant="outline"
                       size="md"
@@ -167,7 +149,7 @@ const Navbar: React.FC<NavbarProps> = ({
                       size="md"
                       fullWidth
                       onClick={() => {
-                        onLogin?.()
+                        onLogin()
                         setMobileMenuOpen(false)
                       }}
                     >
@@ -178,7 +160,7 @@ const Navbar: React.FC<NavbarProps> = ({
                       size="md"
                       fullWidth
                       onClick={() => {
-                        onLogin?.()
+                        onRegister()
                         setMobileMenuOpen(false)
                       }}
                     >
