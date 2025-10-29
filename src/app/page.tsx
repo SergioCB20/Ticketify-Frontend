@@ -57,9 +57,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Navbar
-        onLogin={() => console.log('Login clicked')}
-      />
+      <Navbar />
 
       <main className="flex-grow">
         {/* Hero Section */}
@@ -72,7 +70,7 @@ export default function HomePage() {
 
           <Container className="relative py-20 md:py-32">
             <div className="max-w-3xl mx-auto text-center">
-              <Badge variant="secondary" size="lg" className="mb-6 bg-white/20 text-white border-white/30">
+              <Badge variant="default" size="lg" className="mb-6 bg-white/20 text-white border-white/30">
                 🎉 Bienvenido a Ticketify
               </Badge>
               <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
