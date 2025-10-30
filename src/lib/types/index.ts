@@ -106,3 +106,96 @@ export interface EventFilters {
   dateTo?: string
   search?: string
 }
+// Un tipo simplificado para el evento dentro del listado
+export interface ListingEvent {
+  id: string;
+  title: string;
+  startDate: string;
+  venue: string;
+  multimedia?: string[];
+}
+
+// Un tipo simplificado para el vendedor
+export interface ListingSeller {
+  id: string;
+  firstName: string;
+  lastName: string;
+  profilePhoto?: string;
+}
+
+// El tipo principal para el listado del Marketplace
+export interface MarketplaceListing {
+  id: string;
+  title: string;
+  description?: string;
+  price: number;
+  originalPrice?: number;
+  isNegotiable: boolean;
+  status: "ACTIVE" | "SOLD" | "CANCELLED" | "EXPIRED" | "RESERVED";
+  sellerNotes?: string;
+  transferMethod?: string;
+  createdAt: string;
+  expiresAt?: string;
+  
+  // Asumimos que el backend "hidrata" estas relaciones
+  event: ListingEvent;
+  seller: ListingSeller;
+  
+  ticketId: string;
+  eventId: string;
+  sellerId: string;
+}
+
+// Tipo para la respuesta paginada de listados
+export interface PaginatedListings {
+  items: MarketplaceListing[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface ListingEvent {
+  id: string;
+  title: string;
+  startDate: string;
+  venue: string;
+  multimedia?: string[];
+}
+
+export interface ListingSeller {
+  id: string;
+  firstName: string;
+  lastName: string;
+  profilePhoto?: string;
+}
+
+export interface MarketplaceListing {
+  id: string;
+  title: string;
+  description?: string;
+  price: number;
+  originalPrice?: number;
+  isNegotiable: boolean;
+  status: "ACTIVE" | "SOLD" | "CANCELLED" | "EXPIRED" | "RESERVED";
+  sellerNotes?: string;
+  transferMethod?: string;
+  createdAt: string;
+  expiresAt?: string;
+  
+  // Asumimos que el backend "hidrata" estas relaciones
+  event: ListingEvent;
+  seller: ListingSeller;
+  
+  ticketId: string;
+  eventId: string;
+  sellerId: string;
+}
+
+export interface PaginatedListings {
+  items: MarketplaceListing[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
