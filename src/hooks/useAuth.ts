@@ -48,15 +48,28 @@ export function useAuth() {
 
   const logout = async () => {
     try {
+      // Intentar hacer logout en el backend
       await AuthService.logout()
-      setUser(null)
-      setIsAuthenticated(false)
-      router.push('/login')
     } catch (error) {
       console.error('Error during logout:', error)
-      // Aún así limpiar el estado local
+      // Continuamos con el logout local incluso si falla el backend
+    } finally {
+      // SIEMPRE limpiar el estado local
       setUser(null)
       setIsAuthenticated(false)
+      
+      // Limpiar cualquier otra información de sesión
+      if (typeof window !== 'undefined') {
+        // Limpiar todo el localStorage relacionado con la sesión
+        localStorage.clear()
+        
+        // Limpiar cookies si las hubiera
+        document.cookie.split(';').forEach(function(c) {
+          document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/')
+        })
+      }
+      
+      // Redirigir al login
       router.push('/login')
     }
   }

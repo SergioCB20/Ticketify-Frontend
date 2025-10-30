@@ -3,8 +3,10 @@ import Link from 'next/link'
 import { cn } from '../../lib/utils'
 import { Button } from '../ui/button'
 import { Avatar } from '../ui/avatar'
+import { Dropdown, DropdownItem, DropdownDivider } from '../ui/dropdown'
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
+import { User, LogOut, ChevronDown } from 'lucide-react'
 
 interface NavbarProps {
   className?: string
@@ -80,17 +82,43 @@ const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center space-x-4">
             {user ? (
               <div className="hidden md:flex items-center space-x-3">
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium text-gray-900">
-                    {user.firstName} {user.lastName.slice(0, 1)}
-                  </span>
-                  <button
+                <Dropdown
+                  align="right"
+                  trigger={
+                    <div className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+                      <Avatar
+                        src={user.profilePhoto || undefined}
+                        alt={`${user.firstName} ${user.lastName}`}
+                        fallback={`${user.firstName} ${user.lastName}`}
+                        size="md"
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-gray-900">
+                          {user.firstName} {user.lastName}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {user.email}
+                        </span>
+                      </div>
+                      <ChevronDown className="w-4 h-4 text-gray-400" />
+                    </div>
+                  }
+                >
+                  <DropdownItem
+                    icon={<User className="w-4 h-4" />}
+                    onClick={() => router.push('/profile')}
+                  >
+                    Mi perfil
+                  </DropdownItem>
+                  <DropdownDivider />
+                  <DropdownItem
+                    icon={<LogOut className="w-4 h-4" />}
                     onClick={logout}
-                    className="text-xs text-gray-500 hover:text-primary-600 text-left"
+                    danger
                   >
                     Cerrar sesión
-                  </button>
-                </div>
+                  </DropdownItem>
+                </Dropdown>
               </div>
             ) : (
               <div className="hidden md:flex items-center space-x-2">
@@ -142,11 +170,28 @@ const Navbar: React.FC<NavbarProps> = ({
                 {user ? (
                   <div className="px-4 space-y-3">
                     <div className="flex items-center space-x-3">
+                      <Avatar
+                        src={user.profilePhoto || undefined}
+                        alt={`${user.firstName} ${user.lastName}`}
+                        fallback={`${user.firstName} ${user.lastName}`}
+                        size="md"
+                      />
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{user.firstName} {user.lastName.slice(0, 1)}</p>
+                        <p className="text-sm font-medium text-gray-900">{user.firstName} {user.lastName}</p>
                         <p className="text-xs text-gray-500">{user.email}</p>
                       </div>
                     </div>
+                    <Button
+                      variant="outline"
+                      size="md"
+                      fullWidth
+                      onClick={() => {
+                        router.push('/profile')
+                        setMobileMenuOpen(false)
+                      }}
+                    >
+                      Mi perfil
+                    </Button>
                     <Button
                       variant="outline"
                       size="md"

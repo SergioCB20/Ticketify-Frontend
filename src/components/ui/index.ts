@@ -26,3 +26,5 @@ export type { SelectProps } from './select'
 
 export { Checkbox } from './checkbox'
 export type { CheckboxProps } from './checkbox'
+
+export { Dropdown, DropdownItem, DropdownDivider } from './dropdown'
