@@ -82,23 +82,74 @@ export interface UpdateAdminRoleRequest {
   role: 'SUPER_ADMIN' | 'SUPPORT_ADMIN' | 'SECURITY_ADMIN' | 'CONTENT_ADMIN'
 }
 
-// Tipos de eventos (para referencia futura)
+// ============= TIPOS DE EVENTOS =============
+
+export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED'
+
+export interface OrganizerInfo {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+}
+
+export interface CategoryInfo {
+  id: string
+  name: string
+}
+
 export interface Event {
   id: string
   title: string
-  description: string
-  date: string
-  location: string
-  price: number
-  capacity: number
-  availableTickets: number
+  description?: string
+  startDate: string
+  endDate: string
+  venue: string
+  totalCapacity: number
+  status: EventStatus
+  multimedia: string[]
   organizerId: string
-  organizer: User
-  imageUrl?: string
-  category: string
-  status: 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED'
+  categoryId?: string
+  availableTickets: number
+  isSoldOut: boolean
   createdAt: string
   updatedAt: string
+}
+
+export interface EventDetail extends Event {
+  organizer?: OrganizerInfo
+  category?: CategoryInfo
+}
+
+export interface EventCreate {
+  title: string
+  description?: string
+  startDate: string
+  endDate: string
+  venue: string
+  totalCapacity: number
+  multimedia?: string[]
+  category_id?: string
+}
+
+export interface EventUpdate {
+  title?: string
+  description?: string
+  startDate?: string
+  endDate?: string
+  venue?: string
+  totalCapacity?: number
+  multimedia?: string[]
+  category_id?: string
+  status?: EventStatus
+}
+
+export interface PaginatedEvents {
+  events: Event[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
 }
 
 // Tipos de tickets
@@ -138,13 +189,11 @@ export interface PaginatedResponse<T> {
   itemsPerPage: number
 }
 
-// Tipos de filtros y búsqueda
+// Tipos de filtros y búsqueda de eventos
 export interface EventFilters {
-  category?: string
-  location?: string
-  priceMin?: number
-  priceMax?: number
-  dateFrom?: string
-  dateTo?: string
+  category_id?: string
+  status?: EventStatus
   search?: string
+  start_date?: string
+  end_date?: string
 }
