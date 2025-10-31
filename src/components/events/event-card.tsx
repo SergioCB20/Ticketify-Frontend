@@ -12,7 +12,13 @@ interface EventCardProps {
   location: string
   price: number
   image?: string
-  category?: string
+  category?: string | {
+    id: string
+    name: string
+    slug?: string
+    icon?: string
+    color?: string
+  }
   availableTickets?: number
   className?: string
   onViewDetails?: (id: string) => void
@@ -59,6 +65,42 @@ const EventCard: React.FC<EventCardProps> = ({
   const isLowStock = availableTickets !== undefined && availableTickets < 10
   const isSoldOut = availableTickets === 0
 
+  // Manejar categoría como string u objeto
+  const categoryName = typeof category === 'string' ? category : category?.name
+  const categoryColor = typeof category === 'object' ? category?.color : undefined
+  const categoryIcon = typeof category === 'object' ? category?.icon : undefined
+
+  // Función para obtener estilos del badge según el color
+  const getCategoryBadgeStyles = () => {
+    if (!categoryColor) {
+      // Colores por defecto si no hay color especificado
+      return 'bg-cyan-100 text-cyan-800 border-cyan-200'
+    }
+    
+    // Convertir el color hex a clases de Tailwind
+    const colorMap: { [key: string]: string } = {
+      '#EF4444': 'bg-red-100 text-red-800 border-red-200',
+      '#F97316': 'bg-orange-100 text-orange-800 border-orange-200',
+      '#F59E0B': 'bg-amber-100 text-amber-800 border-amber-200',
+      '#EAB308': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      '#84CC16': 'bg-lime-100 text-lime-800 border-lime-200',
+      '#22C55E': 'bg-green-100 text-green-800 border-green-200',
+      '#10B981': 'bg-emerald-100 text-emerald-800 border-emerald-200',
+      '#14B8A6': 'bg-teal-100 text-teal-800 border-teal-200',
+      '#06B6D4': 'bg-cyan-100 text-cyan-800 border-cyan-200',
+      '#0EA5E9': 'bg-sky-100 text-sky-800 border-sky-200',
+      '#3B82F6': 'bg-blue-100 text-blue-800 border-blue-200',
+      '#6366F1': 'bg-indigo-100 text-indigo-800 border-indigo-200',
+      '#8B5CF6': 'bg-violet-100 text-violet-800 border-violet-200',
+      '#A855F7': 'bg-purple-100 text-purple-800 border-purple-200',
+      '#D946EF': 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200',
+      '#EC4899': 'bg-pink-100 text-pink-800 border-pink-200',
+      '#F43F5E': 'bg-rose-100 text-rose-800 border-rose-200',
+    }
+    
+    return colorMap[categoryColor.toUpperCase()] || 'bg-cyan-100 text-cyan-800 border-cyan-200'
+  }
+
   return (
     <Card 
       variant="interactive" 
@@ -92,9 +134,10 @@ const EventCard: React.FC<EventCardProps> = ({
         
         {/* Badges sobre la imagen */}
         <div className="absolute top-3 left-3 flex gap-2">
-          {category && (
-            <Badge variant="primary" size="sm">
-              {category}
+          {categoryName && (
+            <Badge size="sm" className={getCategoryBadgeStyles()}>
+              {categoryIcon && <span className="mr-1">{categoryIcon}</span>}
+              {categoryName}
             </Badge>
           )}
           {isSoldOut && (

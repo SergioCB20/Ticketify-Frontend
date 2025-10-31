@@ -26,3 +26,9 @@ export type { SelectProps } from './select'
 
 export { Checkbox } from './checkbox'
 export type { CheckboxProps } from './checkbox'
+
+export { SearchWithFilters } from './search-with-filters'
+export type { } from './search-with-filters'
+
+export { AdvancedSearch } from './advanced-search'
+export type { } from './advanced-search'

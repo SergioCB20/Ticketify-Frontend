@@ -1,14 +1,18 @@
 'use client'
 
 import React from 'react'
+import { useRouter } from 'next/navigation'
 import { Navbar } from '@/components/layout/navbar'
 import { Footer } from '@/components/layout/footer'
 import { Container } from '@/components/ui/container'
 import { Button } from '@/components/ui/button'
 import { EventCard } from '@/components/events/event-card'
 import { Badge } from '@/components/ui/badge'
+import { SearchWithFilters } from '@/components/ui/search-with-filters'
 
 export default function HomePage() {
+  const router = useRouter()
+
   // Mock data - en producción vendría del backend
   const featuredEvents = [
     {
@@ -102,26 +106,50 @@ export default function HomePage() {
         {/* Search Section */}
         <section className="bg-white py-6 shadow-md -mt-8 relative z-10">
           <Container>
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <input
-                  type="text"
-                  placeholder="Buscar eventos..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-              </div>
-              <div className="flex-1">
-                <select className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
-                  <option>Todas las categorías</option>
-                  <option>Música</option>
-                  <option>Deportes</option>
-                  <option>Teatro</option>
-                </select>
-              </div>
-              <Button variant="primary" size="lg" className="md:w-auto">
-                Buscar
-              </Button>
-            </div>
+            <SearchWithFilters
+              onSearch={(query, filters) => {
+                // Construir parámetros de URL
+                const params = new URLSearchParams()
+                
+                if (query) params.set('q', query)
+                if (filters.categories && filters.categories.length > 0) {
+                  params.set('categories', filters.categories.join(','))
+                }
+                if (filters.price?.min !== undefined) {
+                  params.set('minPrice', filters.price.min.toString())
+                }
+                if (filters.price?.max !== undefined) {
+                  params.set('maxPrice', filters.price.max.toString())
+                }
+                if (filters.date?.start) {
+                  params.set('startDate', filters.date.start)
+                }
+                if (filters.date?.end) {
+                  params.set('endDate', filters.date.end)
+                }
+                if (filters.location) {
+                  params.set('location', filters.location)
+                }
+                if (filters.venue) {
+                  params.set('venue', filters.venue)
+                }
+                
+                // Redirigir a la página de eventos con los filtros
+                router.push(`/events?${params.toString()}`)
+              }}
+              categories={[
+                { label: 'Arte & Cultura', value: 'arte-cultura' },
+                { label: 'Ayuda Social', value: 'ayuda-social' },
+                { label: 'Cine', value: 'cine' },
+                { label: 'Comidas & Bebidas', value: 'comidas-bebidas' },
+                { label: 'Conciertos', value: 'conciertos' },
+                { label: 'Cursos y talleres', value: 'cursos-talleres' },
+                { label: 'Deportes', value: 'deportes' },
+                { label: 'Donación', value: 'donacion' },
+                { label: 'Entretenimiento', value: 'entretenimiento' },
+                { label: 'Festivales', value: 'festivales' },
+              ]}
+            />
           </Container>
         </section>
 

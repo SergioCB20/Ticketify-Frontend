@@ -1,24 +1,30 @@
+'use client'
+
 import React from 'react'
 import Link from 'next/link'
-import { cn } from '../../lib/utils'
+import { cn } from '@/lib/utils'
 import { Button } from '../ui/button'
-import { Avatar } from '../ui/avatar'
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
+import { SearchWithFilters } from '../ui/search-with-filters'
 
 interface NavbarProps {
   className?: string
+  showSearch?: boolean
+  categories?: Array<{ id: string; name: string; icon?: string }>
 }
 
 /**
  * Navbar Component
- * Barra de navegación principal con logo, links y autenticación
+ * Barra de navegación principal con logo, búsqueda avanzada y autenticación
  */
 const Navbar: React.FC<NavbarProps> = ({ 
-  className 
+  className,
+  showSearch = false,
+  categories = []
 }) => {
-  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
-  const router = useRouter();
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
+  const router = useRouter()
 
   const navLinks = [
     { href: '/', label: 'Inicio' },
@@ -27,22 +33,53 @@ const Navbar: React.FC<NavbarProps> = ({
     { href: '/contact', label: 'Contacto' },
   ]
 
-  const { user, logout } = useAuth();
+  const { user, logout } = useAuth()
 
   const onLogin = () => {
-    router.push('/login');
+    router.push('/login')
   }
 
   const onRegister = () => {
-    router.push('/register');
+    router.push('/register')
+  }
+
+  const handleSearch = (query: string, filters: any) => {
+    console.log('Search:', query, filters)
+    // Construir parámetros de URL
+    const params = new URLSearchParams()
+    
+    if (query) params.set('q', query)
+    if (filters.categories && filters.categories.length > 0) {
+      params.set('categories', filters.categories.join(','))
+    }
+    if (filters.price?.min !== undefined) {
+      params.set('minPrice', filters.price.min.toString())
+    }
+    if (filters.price?.max !== undefined) {
+      params.set('maxPrice', filters.price.max.toString())
+    }
+    if (filters.date?.start) {
+      params.set('startDate', filters.date.start)
+    }
+    if (filters.date?.end) {
+      params.set('endDate', filters.date.end)
+    }
+    if (filters.location) {
+      params.set('location', filters.location)
+    }
+    if (filters.venue) {
+      params.set('venue', filters.venue)
+    }
+    
+    router.push(`/events?${params.toString()}`)
   }
 
   return (
     <nav className={cn('sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm', className)}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
+        <div className="flex h-16 items-center justify-between gap-4">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2 group">
+          <Link href="/" className="flex items-center space-x-2 group flex-shrink-0">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary-500 to-secondary-500 transition-transform group-hover:scale-105">
               <svg
                 className="h-6 w-6 text-white"
@@ -63,6 +100,19 @@ const Navbar: React.FC<NavbarProps> = ({
             </span>
           </Link>
 
+          {/* Search Bar - Desktop */}
+          {showSearch && (
+            <div className="hidden lg:block flex-1 max-w-2xl mx-8">
+              <SearchWithFilters 
+                onSearch={handleSearch}
+                categories={categories.map(cat => ({
+                  label: cat.name,
+                  value: cat.id
+                }))}
+              />
+            </div>
+          )}
+
           {/* Desktop Navigation */}
           <div className="hidden md:flex md:items-center md:space-x-1">
             {navLinks.map((link) => (
@@ -77,7 +127,7 @@ const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Auth Section */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-4 flex-shrink-0">
             {user ? (
               <div className="hidden md:flex items-center space-x-3">
                 <div className="flex flex-col">
@@ -123,6 +173,19 @@ const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
+        {/* Search Bar - Mobile */}
+        {showSearch && (
+          <div className="lg:hidden pb-4">
+            <SearchWithFilters 
+              onSearch={handleSearch}
+              categories={categories.map(cat => ({
+                label: cat.name,
+                value: cat.id
+              }))}
+            />
+          </div>
+        )}
+
         {/* Mobile menu */}
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-gray-200 animate-slide-down">
@@ -166,7 +229,7 @@ const Navbar: React.FC<NavbarProps> = ({
                       size="md"
                       fullWidth
                       onClick={() => {
-                        onLogin?.()
+                        onLogin()
                         setMobileMenuOpen(false)
                       }}
                     >
@@ -177,7 +240,7 @@ const Navbar: React.FC<NavbarProps> = ({
                       size="md"
                       fullWidth
                       onClick={() => {
-                        onLogin?.()
+                        onRegister()
                         setMobileMenuOpen(false)
                       }}
                     >
