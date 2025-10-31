@@ -70,7 +70,7 @@ export default function HomePage() {
 
           <Container className="relative py-20 md:py-32">
             <div className="max-w-3xl mx-auto text-center">
-              <Badge variant="default" size="lg" className="mb-6 bg-white/20 text-white border-white/30">
+              <Badge variant="default" className="mb-6 bg-white/20 text-white border-white/30">
                 🎉 Bienvenido a Ticketify
               </Badge>
               <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">

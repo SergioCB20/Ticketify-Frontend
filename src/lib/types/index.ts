@@ -155,21 +155,10 @@ export interface Promotion {
   name: string
   description?: string
   code: string
-  promotionType: 'PERCENTAGE' | 'FIXED_AMOUNT' | 'BUY_ONE_GET_ONE' | 'EARLY_BIRD'
+  promotion_type: 'PERCENTAGE' | 'FIXED_AMOUNT'
   discountValue: number
-  maxDiscountAmount?: number
-  minPurchaseAmount?: number
-  maxUses?: number
-  maxUsesPerUser?: number
-  currentUses?: number
   startDate: string
   endDate: string
-  appliesToAllEvents: boolean
-  appliesToNewUsersOnly: boolean
-  status: 'ACTIVE' | 'INACTIVE' | 'EXPIRED' | 'USED_UP'
-  isPublic: boolean
-  isActive: boolean
-  createdAt?: string
-  updatedAt?: string
-  organizerId?: string
 }
+
+
