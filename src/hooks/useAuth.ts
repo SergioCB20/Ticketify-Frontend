@@ -23,17 +23,23 @@ export function useAuth() {
     setLoading(false)
   }
 
-  const login = async (credentials: LoginCredentials) => {
-    try {
-      const response = await AuthService.login(credentials)
-      console.log('Login successful:', response)
-      setUser(response.user)
-      setIsAuthenticated(true)
-      return response
-    } catch (error) {
-      throw error
-    }
+const login = async (credentials: LoginCredentials) => {
+  try {
+    const response = await AuthService.login(credentials)
+
+    // Guardar tokens y usuario en localStorage
+    localStorage.setItem('ticketify_access_token', response.accessToken)
+    localStorage.setItem('ticketify_refresh_token', response.refreshToken)
+    localStorage.setItem('ticketify_user', JSON.stringify(response.user))
+
+    setUser(response.user)
+    setIsAuthenticated(true)
+    return response
+  } catch (error) {
+    throw error
   }
+}
+
 
   const register = async (userData: RegisterData) => {
     try {

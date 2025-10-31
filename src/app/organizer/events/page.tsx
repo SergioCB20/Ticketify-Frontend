@@ -35,33 +35,35 @@ export default function OrganizerEventsPage() {
 
   // --- Carga de Datos con FETCH ---
   useEffect(() => {
-    const fetchOrganizerEvents = async () => {
-      setIsLoading(true);
-      try {
-        // ✅ Llamada con fetch
-        const response = await fetch( `${API_URL}/api/events/organizer/me`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
+      const fetchOrganizerEvents = async () => {
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem('ticketify_access_token');
 
-        if (!response.ok) {
-          throw new Error(`Error HTTP: ${response.status}`);
-        }
+      if (!token) throw new Error('No hay token en localStorage');
 
-        // ✅ Convierte la respuesta a JSON
-        const data: OrganizerEvent[] = await response.json();
+      const response = await fetch(`${API_URL}/api/events/organizer/me`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
 
-        // ✅ Guarda los datos en el estado
-        setEvents(data);
-      } catch (error) {
-        console.error("Error al cargar eventos:", error);
-        setEvents([]); // Si hay error, se muestra vacío
-      } finally {
-        setIsLoading(false);
+      if (!response.ok) {
+        throw new Error(`Error HTTP: ${response.status}`);
       }
-    };
+
+      const data: OrganizerEvent[] = await response.json();
+      setEvents(data);
+    } catch (error) {
+      console.error("Error al cargar eventos:", error);
+      setEvents([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
 
     fetchOrganizerEvents();
   }, []);
