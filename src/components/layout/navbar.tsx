@@ -3,15 +3,10 @@ import Link from 'next/link'
 import { cn } from '../../lib/utils'
 import { Button } from '../ui/button'
 import { Avatar } from '../ui/avatar'
+import { useAuth } from '@/hooks/useAuth'
+import { useRouter } from 'next/navigation'
 
 interface NavbarProps {
-  user?: {
-    name: string
-    email: string
-    avatar?: string
-  }
-  onLogin?: () => void
-  onLogout?: () => void
   className?: string
 }
 
@@ -20,12 +15,10 @@ interface NavbarProps {
  * Barra de navegación principal con logo, links y autenticación
  */
 const Navbar: React.FC<NavbarProps> = ({ 
-  user, 
-  onLogin, 
-  onLogout,
   className 
 }) => {
-  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const router = useRouter();
 
   const navLinks = [
     { href: '/', label: 'Inicio' },
@@ -33,6 +26,16 @@ const Navbar: React.FC<NavbarProps> = ({
     { href: '/about', label: 'Nosotros' },
     { href: '/contact', label: 'Contacto' },
   ]
+
+  const { user, logout } = useAuth();
+
+  const onLogin = () => {
+    router.push('/login');
+  }
+
+  const onRegister = () => {
+    router.push('/register');
+  }
 
   return (
     <nav className={cn('sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm', className)}>
@@ -77,18 +80,12 @@ const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center space-x-4">
             {user ? (
               <div className="hidden md:flex items-center space-x-3">
-                <Avatar
-                  src={user.avatar}
-                  alt={user.name}
-                  fallback={user.name}
-                  size="md"
-                />
                 <div className="flex flex-col">
                   <span className="text-sm font-medium text-gray-900">
-                    {user.name}
+                    {user.firstName} {user.lastName.slice(0, 1)}
                   </span>
                   <button
-                    onClick={onLogout}
+                    onClick={logout}
                     className="text-xs text-gray-500 hover:text-primary-600 text-left"
                   >
                     Cerrar sesión
@@ -100,7 +97,7 @@ const Navbar: React.FC<NavbarProps> = ({
                 <Button variant="ghost" size="md" onClick={onLogin}>
                   Iniciar sesión
                 </Button>
-                <Button variant="primary" size="md" onClick={onLogin}>
+                <Button variant="primary" size="md" onClick={onRegister}>
                   Registrarse
                 </Button>
               </div>
@@ -145,14 +142,8 @@ const Navbar: React.FC<NavbarProps> = ({
                 {user ? (
                   <div className="px-4 space-y-3">
                     <div className="flex items-center space-x-3">
-                      <Avatar
-                        src={user.avatar}
-                        alt={user.name}
-                        fallback={user.name}
-                        size="md"
-                      />
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                        <p className="text-sm font-medium text-gray-900">{user.firstName} {user.lastName.slice(0, 1)}</p>
                         <p className="text-xs text-gray-500">{user.email}</p>
                       </div>
                     </div>
@@ -161,7 +152,7 @@ const Navbar: React.FC<NavbarProps> = ({
                       size="md"
                       fullWidth
                       onClick={() => {
-                        onLogout?.()
+                        logout()
                         setMobileMenuOpen(false)
                       }}
                     >

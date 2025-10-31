@@ -10,6 +10,7 @@ export interface User {
   isActive: boolean
   createdAt: string
   lastLogin?: string
+  roles?: string[]
 }
 
 // Tipos de autenticación
@@ -38,6 +39,47 @@ export interface RegisterData {
   gender: 'masculino' | 'femenino' | 'otro' | 'prefiero-no-decir'
   acceptTerms: boolean
   acceptMarketing?: boolean
+}
+
+// Tipos de Admin
+export interface AdminUser {
+  id: string
+  email: string
+  firstName: string
+  lastName: string
+  phoneNumber?: string
+  isActive: boolean
+  roles: string[]
+  createdAt: string
+  lastLogin?: string
+}
+
+export interface PaginatedUsers {
+  users: User[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
+export interface AdminStats {
+  totalUsers: number
+  activeUsers: number
+  bannedUsers: number
+  totalAdmins: number
+  activeAdmins: number
+  totalEvents: number
+  totalTickets: number
+  recentRegistrations: number
+}
+
+export interface BanUserRequest {
+  isActive: boolean
+  reason?: string
+}
+
+export interface UpdateAdminRoleRequest {
+  role: 'SUPER_ADMIN' | 'SUPPORT_ADMIN' | 'SECURITY_ADMIN' | 'CONTENT_ADMIN'
 }
 
 // Tipos de eventos (para referencia futura)
