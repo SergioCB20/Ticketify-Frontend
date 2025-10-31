@@ -4,13 +4,16 @@ export interface User {
   firstName: string
   lastName: string
   email: string
-  phoneNumber?: string
-  documentId?: string
+  phoneNumber: string
+  country: string
+  city: string
+  documentType: 'DNI' | 'CE' | 'Pasaporte'
+  documentId: string
   profilePhoto?: string
   isActive: boolean
   createdAt: string
   lastLogin?: string
-  roles?: string[]
+  roles: string[]
 }
 
 // Tipos de autenticación
@@ -82,23 +85,77 @@ export interface UpdateAdminRoleRequest {
   role: 'SUPER_ADMIN' | 'SUPPORT_ADMIN' | 'SECURITY_ADMIN' | 'CONTENT_ADMIN'
 }
 
-// Tipos de eventos (para referencia futura)
+// ============= TIPOS DE EVENTOS =============
+
+export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED'
+
+export interface OrganizerInfo {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+}
+
+export interface CategoryInfo {
+  id: string
+  name: string
+  slug: string // Añadido para consistencia
+}
+
 export interface Event {
   id: string
   title: string
-  description: string
-  date: string
-  location: string
-  price: number
-  capacity: number
-  availableTickets: number
+  description?: string
+  startDate: string
+  endDate: string
+  venue: string
+  totalCapacity: number
+  status: EventStatus
+  multimedia: string[]
   organizerId: string
-  organizer: User
-  imageUrl?: string
-  category: string
-  status: 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED'
+  categoryId?: string
+  availableTickets: number
+  isSoldOut: boolean
   createdAt: string
   updatedAt: string
+}
+
+// EventDetail incluye la info completa del organizador y categoría
+export interface EventDetail extends Event {
+  organizer?: OrganizerInfo
+  category?: CategoryInfo
+}
+
+export interface EventCreate {
+  title: string
+  description?: string
+  startDate: string
+  endDate: string
+  venue: string
+  totalCapacity: number
+  multimedia?: string[]
+  category_id?: string // El backend espera category_id
+}
+
+export interface EventUpdate {
+  title?: string
+  description?: string
+  startDate?: string
+  endDate?: string
+  venue?: string
+  totalCapacity?: number
+  multimedia?: string[]
+  category_id?: string
+  status?: EventStatus // Aunque usamos /publish y /cancel, el update genérico podría permitirlo
+}
+
+// Representa la respuesta de lista del backend
+export interface PaginatedEvents {
+  events: Event[] // El backend devuelve una lista de Event/EventResponse
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
 }
 
 // Tipos de tickets
@@ -138,13 +195,29 @@ export interface PaginatedResponse<T> {
   itemsPerPage: number
 }
 
-// Tipos de filtros y búsqueda
-export interface EventFilters {
-  category?: string
-  location?: string
-  priceMin?: number
-  priceMax?: number
-  dateFrom?: string
-  dateTo?: string
-  search?: string
+// ============= FILTROS DE BÚSQUEDA DE EVENTOS =============
+// Reemplaza al antiguo 'EventFilters' para coincidir con el backend unificado
+
+export interface EventSearchFilters {
+  query?: string           // Búsqueda por texto (título, descripción)
+  categories?: string      // Slugs de categorías separadas por comas
+  min_price?: number
+  max_price?: number
+  start_date?: string | Date // Permite enviar Date desde el frontend
+  end_date?: string | Date   // Permite enviar Date desde el frontend
+  location?: string        // Búsqueda por ciudad/región
+  venue?: string           // Búsqueda por nombre del local
+  status?: EventStatus
+  organizer_id?: string    // Filtrar por un organizador específico
+}
+
+export interface Promotion {
+  id: string
+  name: string
+  description?: string
+  code: string
+  promotion_type: 'PERCENTAGE' | 'FIXED_AMOUNT'
+  discountValue: number
+  startDate: string
+  endDate: string
 }

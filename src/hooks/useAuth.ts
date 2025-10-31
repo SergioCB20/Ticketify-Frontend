@@ -49,15 +49,11 @@ export function useAuth() {
   const logout = async () => {
     try {
       await AuthService.logout()
-      setUser(null)
-      setIsAuthenticated(false)
-      router.push('/login')
     } catch (error) {
       console.error('Error during logout:', error)
-      // Aún así limpiar el estado local
+    } finally {
       setUser(null)
       setIsAuthenticated(false)
-      router.push('/login')
     }
   }
 
