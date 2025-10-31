@@ -1,8 +1,4 @@
-// Pega este código en: src/app/organizer/events/page.tsx
-// Esta versión corrige la llamada a formatDate para que sea compatible con utils.ts original.
-
 'use client'
-
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -14,20 +10,21 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-// Usa la función formatDate original de utils.ts
 import { formatDate } from '@/lib/utils'
 
 // --- Tipo de datos ---
 interface OrganizerEvent {
   id: string;
   title: string;
-  date: string; // O Date
+  date: string;
   location: string;
   totalTickets: number;
   soldTickets: number;
   status: 'DRAFT' | 'PUBLISHED' | 'COMPLETED' | 'CANCELLED';
   imageUrl?: string;
 }
+
+const API_URL = 'http://localhost:8000';
 
 // --- Componente ---
 export default function OrganizerEventsPage() {
@@ -36,25 +33,36 @@ export default function OrganizerEventsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
-  // --- Simulación de Carga ---
+  // --- Carga de Datos con FETCH ---
   useEffect(() => {
     const fetchOrganizerEvents = async () => {
       setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      const simulateEvents = true; // Cambia a false para probar sin eventos
-      if (simulateEvents) {
-        setEvents([
-          { id: 'evt-1', title: 'Concierto Rock Urbano', date: '2025-11-25T20:00:00Z', location: 'Anfiteatro del Parque', totalTickets: 500, soldTickets: 350, status: 'PUBLISHED', imageUrl: '/images/mock/event1.jpg' },
-          { id: 'evt-2', title: 'Festival Gastronómico', date: '2025-12-10T11:00:00Z', location: 'Explanada Costa Verde', totalTickets: 2000, soldTickets: 1850, status: 'PUBLISHED', imageUrl: '/images/mock/event2.jpg' },
-          { id: 'evt-3', title: 'Taller Fotografía', date: '2025-12-05T18:00:00Z', location: 'Centro Cultural Miraflores', totalTickets: 50, soldTickets: 50, status: 'COMPLETED', imageUrl: '/images/mock/event3.jpg' },
-          { id: 'evt-4', title: 'Lanzamiento Colección', date: '2025-11-30T19:00:00Z', location: 'Hotel Westin', totalTickets: 150, soldTickets: 0, status: 'DRAFT' },
-          { id: 'evt-5', title: 'Evento Cancelado', date: '2025-11-01T10:00:00Z', location: 'Auditorio Principal', totalTickets: 100, soldTickets: 20, status: 'CANCELLED' },
-        ]);
-      } else {
-        setEvents([]);
+      try {
+        // ✅ Llamada con fetch
+        const response = await fetch( `${API_URL}/api/events/organizer/me`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error HTTP: ${response.status}`);
+        }
+
+        // ✅ Convierte la respuesta a JSON
+        const data: OrganizerEvent[] = await response.json();
+
+        // ✅ Guarda los datos en el estado
+        setEvents(data);
+      } catch (error) {
+        console.error("Error al cargar eventos:", error);
+        setEvents([]); // Si hay error, se muestra vacío
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
+
     fetchOrganizerEvents();
   }, []);
 
@@ -66,12 +74,25 @@ export default function OrganizerEventsPage() {
   });
 
   // --- Funciones Auxiliares ---
-  const getStatusBadgeVariant = (status: OrganizerEvent['status']): 'success' | 'info' | 'default' | 'error' => {
-     switch (status) { case 'PUBLISHED': return 'success'; case 'DRAFT': return 'info'; case 'COMPLETED': return 'default'; case 'CANCELLED': return 'error'; default: return 'default'; }
-  }
+  const getStatusBadgeVariant = (status: OrganizerEvent['status']): 'success' | 'default' | 'destructive' | 'warning' => {
+    switch (status) {
+      case 'PUBLISHED': return 'success';
+      case 'DRAFT': return 'warning';
+      case 'COMPLETED': return 'default';
+      case 'CANCELLED': return 'destructive';
+      default: return 'default';
+    }
+  };
+
   const getStatusBadgeText = (status: OrganizerEvent['status']): string => {
-     switch (status) { case 'PUBLISHED': return 'Publicado'; case 'DRAFT': return 'Borrador'; case 'COMPLETED': return 'Completado'; case 'CANCELLED': return 'Cancelado'; default: return 'Desconocido'; }
-  }
+    switch (status) {
+      case 'PUBLISHED': return 'Publicado';
+      case 'DRAFT': return 'Borrador';
+      case 'COMPLETED': return 'Completado';
+      case 'CANCELLED': return 'Cancelado';
+      default: return 'Desconocido';
+    }
+  };
 
   // --- Renderizado ---
   return (
@@ -135,7 +156,7 @@ export default function OrganizerEventsPage() {
             <Card className="text-center py-16 md:py-20 px-6 bg-white shadow-lg border border-gray-100 rounded-xl max-w-2xl mx-auto">
               <CardContent className="flex flex-col items-center">
                 <div className="p-4 bg-violet-100 rounded-full mb-6 inline-flex border-4 border-violet-200">
-                 <Star width="48" height="48" className="text-violet-600" fill="currentColor"/>
+                  <Star width="48" height="48" className="text-violet-600" fill="currentColor"/>
                 </div>
                 <h2 className="text-2xl md:text-3xl font-semibold text-gray-800 mb-3">
                   {searchTerm || statusFilter ? 'No se encontraron eventos' : 'Aún no tienes eventos creados'}
@@ -144,7 +165,7 @@ export default function OrganizerEventsPage() {
                   {searchTerm || statusFilter ? 'Prueba con otros términos de búsqueda o filtros.' : 'Crea tu primer evento para empezar a vender entradas y gestionar tus actividades.'}
                 </p>
                 {!searchTerm && !statusFilter && (
-                   <Link href="/organizer/events/create" passHref>
+                  <Link href="/organizer/events/create" passHref>
                     <Button variant="primary" size="lg" className="h-12 text-lg rounded-xl shadow-md hover:shadow-lg transition-shadow">
                       <PlusCircle className="mr-2 h-5 w-5" />
                       Crear Evento
@@ -158,7 +179,7 @@ export default function OrganizerEventsPage() {
               {filteredEvents.map((event) => (
                 <Card
                   key={event.id}
-                  variant="default" // Variante corregida
+                  variant="default"
                   className="flex flex-col md:flex-row overflow-hidden bg-white hover:shadow-lg transition-shadow duration-300 group rounded-xl border border-gray-200 shadow-sm"
                 >
                   {/* Imagen */}
@@ -180,24 +201,20 @@ export default function OrganizerEventsPage() {
                     <CardHeader className="p-0 mb-2">
                       <CardTitle className="text-lg md:text-xl font-semibold text-gray-800 line-clamp-2 group-hover:text-primary-600 transition-colors">
                         <Link href={`/organizer/events/${event.id}/dashboard`} className="focus:outline-none focus:ring-1 focus:ring-primary-300 rounded">
-                           {event.title}
+                          {event.title}
                         </Link>
                       </CardTitle>
                     </CardHeader>
 
                     <CardContent className="p-0 flex-grow space-y-2 text-sm text-gray-600 mb-4">
-                      {/* Fecha y Hora - LÍNEA CORREGIDA */}
                       <div className="flex items-center">
                         <Calendar className="mr-2 h-4 w-4 text-gray-500 flex-shrink-0" />
-                        {/* Usamos opciones específicas compatibles con Intl.DateTimeFormat */}
                         {formatDate(event.date, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
                       </div>
-                      {/* Ubicación */}
                       <div className="flex items-start">
                         <MapPin className="mr-2 h-4 w-4 text-gray-500 flex-shrink-0 mt-0.5" />
                         <span className="line-clamp-2">{event.location}</span>
                       </div>
-                      {/* Tickets */}
                       <div className="flex items-center">
                         <Ticket className="mr-2 h-4 w-4 text-gray-500 flex-shrink-0" />
                         <span className="font-medium text-gray-800">{event.soldTickets.toLocaleString()}</span>
@@ -209,7 +226,6 @@ export default function OrganizerEventsPage() {
                       </div>
                     </CardContent>
 
-                    {/* Botones */}
                     <CardFooter className="p-0 flex flex-col sm:flex-row gap-3 mt-auto pt-4 border-t border-gray-100">
                       <Link href={`/organizer/events/${event.id}/edit`} className="w-full sm:w-auto flex-1" passHref>
                         <Button variant="outline" size="sm" fullWidth className="font-medium text-gray-700 hover:bg-gray-50 rounded-lg">
