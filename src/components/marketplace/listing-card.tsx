@@ -8,30 +8,60 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Avatar } from '@/components/ui/avatar'
 import { Tag, Calendar, MapPin, User, ArrowRight } from 'lucide-react'
+import Link from 'next/link'
+
+// --- (1) IMPORTACIONES AÑADIDAS ---
+import { useAuth } from '@/hooks/useAuth'
+import { useRouter } from 'next/navigation'
+import { toast } from 'react-hot-toast'
 
 interface ListingCardProps {
   listing: MarketplaceListing
   className?: string
-  onViewListing?: (id: string) => void
+  
 }
 
-/**
- * ListingCard Component
- * Tarjeta para mostrar un ticket en reventa (Marketplace)
- */
 const ListingCard: React.FC<ListingCardProps> = ({
   listing,
   className,
-  onViewListing,
 }) => {
   
   const { event, seller, price, originalPrice, title } = listing
 
-  // Calcular descuento
+  // --- (2) HOOKS DE AUTENTICACIÓN Y RUTA ---
+  const { isAuthenticated, user } = useAuth()
+  const router = useRouter()
+
   const hasDiscount = originalPrice && price < originalPrice;
   const discountPercent = hasDiscount 
     ? Math.round(((originalPrice! - price) / originalPrice!) * 100)
     : 0;
+  
+  const imageUrl = event.multimedia?.[0] || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&q=80';
+
+  // --- (3) LÓGICA DE VALIDACIÓN ---
+  const handleBuyClick = () => {
+    // 1. Validar si está logueado
+    if (!isAuthenticated) {
+      toast.error('Debes iniciar sesión para comprar')
+      router.push('/login') // Redirige al login
+      return;
+    }
+
+    // 2. Validar si tiene el rol de 'ATTENDEE'
+    // Tu modelo de usuario del backend define 'ATTENDEE'
+    if (user && !user.roles.includes('Attendee')) {
+      toast.error('Solo los asistentes pueden comprar tickets.')
+      return;
+    }
+
+    // 3. ¡Éxito! El usuario es un asistente logueado.
+    // Aquí iría la lógica para navegar a la pasarela de pago.
+    console.log('¡Validación exitosa! Redirigiendo a la pasarela de pago para el listado:', listing.id)
+    // router.push(`/checkout/marketplace/${listing.id}`) // (Ejemplo de ruta futura)
+    toast.success('¡Validado! Redirigiendo al pago...')
+    router.push('/prueba-de-venta')
+  }
 
   return (
     <Card 
@@ -39,24 +69,23 @@ const ListingCard: React.FC<ListingCardProps> = ({
       className={cn('group h-full flex flex-col', className)}
     >
       {/* Imagen del evento */}
-      <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-primary-200 to-secondary-200">
-        <img
-          src={event.multimedia?.[0] || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&q=80'}
-          alt={event.title}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-        />
-        
-        {/* Badges sobre la imagen */}
-        <div className="absolute top-3 left-3">
-          {hasDiscount && (
-            <Badge variant="success">
-              {discountPercent}% OFF
-            </Badge>
-          )}
+      <Link href={`/marketplace/${listing.id}`} className="block">
+        <div className="relative h-48 w-full overflow-hidden bg-gray-200">
+          <img
+            src={imageUrl}
+            alt={event.title}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+          <div className="absolute top-3 left-3">
+            {hasDiscount && (
+              <Badge variant="success" size="sm">
+                {discountPercent}% OFF
+              </Badge>
+            )}
+          </div>
         </div>
-      </div>
+      </Link>
 
-      {/* Contenido */}
       <CardHeader className="pb-3">
         {/* Vendedor */}
         <div className="flex items-center gap-2 mb-2">
@@ -72,8 +101,10 @@ const ListingCard: React.FC<ListingCardProps> = ({
         </div>
 
         {/* Título del Listado */}
-        <h3 className="font-semibold text-lg text-gray-900 line-clamp-2 group-hover:text-primary-600 transition-colors">
-          {title}
+        <h3 className="font-semibold text-lg text-gray-900 line-clamp-2 transition-colors">
+          <Link href={`/marketplace/${listing.id}`} className="hover:text-primary-600">
+            {title}
+          </Link>
         </h3>
         
         {/* Título del Evento */}
@@ -83,22 +114,17 @@ const ListingCard: React.FC<ListingCardProps> = ({
       </CardHeader>
 
       <CardContent className="space-y-2 pt-0 pb-4 flex-grow">
-        {/* Fecha */}
         <div className="flex items-center text-sm text-gray-600">
           <Calendar className="mr-2 h-4 w-4 text-primary-500" />
-          {formatDate(event.startDate, { month: 'long', day: 'numeric' })}
+          {formatDate(event.startDate, { month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' })}
         </div>
-
-        {/* Ubicación */}
         <div className="flex items-center text-sm text-gray-600">
           <MapPin className="mr-2 h-4 w-4 text-primary-500" />
           <span className="line-clamp-1">{event.venue}</span>
         </div>
       </CardContent>
 
-      {/* Footer con precio y acción */}
       <CardFooter className="flex items-end justify-between">
-        {/* Precio */}
         <div className="flex flex-col items-start">
           <span className="text-2xl font-bold text-primary-600">
             {formatPrice(price)}
@@ -110,12 +136,14 @@ const ListingCard: React.FC<ListingCardProps> = ({
           )}
         </div>
         
-        {/* Botón */}
+        {/* --- (4) BOTÓN ACTUALIZADO ---
+            Se quita 'asChild' y '<Link>', se añade 'onClick'
+        --- */}
         <Button
           variant="primary"
           size="md"
           className="group"
-          onClick={() => onViewListing?.(listing.id)}
+          onClick={handleBuyClick} // Se llama a la nueva función
         >
           Comprar
           <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
@@ -126,5 +154,4 @@ const ListingCard: React.FC<ListingCardProps> = ({
 }
 
 ListingCard.displayName = 'ListingCard'
-
 export { ListingCard }

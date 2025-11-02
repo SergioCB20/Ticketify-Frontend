@@ -30,6 +30,7 @@ const Navbar: React.FC<NavbarProps> = ({
   const navLinks = [
     { href: '/', label: 'Inicio' },
     { href: '/events', label: 'Eventos' },
+    { href: '/marketplace', label: 'Marketplace' },
     { href: '/about', label: 'Nosotros' },
     { href: '/contact', label: 'Contacto' },
   ]

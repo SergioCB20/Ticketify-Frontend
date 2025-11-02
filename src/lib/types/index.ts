@@ -221,3 +221,26 @@ export interface Promotion {
   startDate: string
   endDate: string
 }
+export interface TicketType {
+  id: string;
+  name: string;
+}
+
+// El tipo para un ticket que el usuario posee
+export interface MyTicket {
+  id: string;
+  price: number;
+  purchaseDate: string;
+  status: "ACTIVE" | "USED" | "CANCELLED" | "EXPIRED" | "TRANSFERRED";
+  isValid: boolean;
+  event: ListingEvent; // Reutilizamos el tipo de evento
+  ticketType: TicketType;
+  isListed: boolean; // ¿Ya está a la venta?
+}
+
+// El tipo para el formulario de Venta
+export interface CreateListingData {
+  ticketId: string;
+  price: number;
+  description?: string;
+}
