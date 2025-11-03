@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { cn, formatPrice, formatDate } from '@/lib/utils'
 import type { MarketplaceListing } from '@/lib/types'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Avatar } from '@/components/ui/avatar'
 import { Tag, Calendar, MapPin, User, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
-
+import { MarketplaceService } from '@/services/api/marketplace'
 // --- (1) IMPORTACIONES AÑADIDAS ---
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
@@ -31,7 +31,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
   // --- (2) HOOKS DE AUTENTICACIÓN Y RUTA ---
   const { isAuthenticated, user } = useAuth()
   const router = useRouter()
-
+  const [loading, setLoading] = useState(false)
   const hasDiscount = originalPrice && price < originalPrice;
   const discountPercent = hasDiscount 
     ? Math.round(((originalPrice! - price) / originalPrice!) * 100)
@@ -40,11 +40,13 @@ const ListingCard: React.FC<ListingCardProps> = ({
   const imageUrl = event.multimedia?.[0] || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&q=80';
 
   // --- (3) LÓGICA DE VALIDACIÓN ---
-  const handleBuyClick = () => {
+  const handleBuyClick = async () => {
+    setLoading(true)
     // 1. Validar si está logueado
     if (!isAuthenticated) {
       toast.error('Debes iniciar sesión para comprar')
       router.push('/login') // Redirige al login
+      setLoading(false)
       return;
     }
 
@@ -52,15 +54,34 @@ const ListingCard: React.FC<ListingCardProps> = ({
     // Tu modelo de usuario del backend define 'ATTENDEE'
     if (user && !user.roles.includes('Attendee')) {
       toast.error('Solo los asistentes pueden comprar tickets.')
+      setLoading(false)
       return;
     }
+    
+    //#############################
+    if (user?.id === seller.id) {
+        toast.error('No puedes comprar tu propio ticket.')
+        setLoading(false)
+        return;
+      }
+    //############################
+
 
     // 3. ¡Éxito! El usuario es un asistente logueado.
     // Aquí iría la lógica para navegar a la pasarela de pago.
-    console.log('¡Validación exitosa! Redirigiendo a la pasarela de pago para el listado:', listing.id)
-    // router.push(`/checkout/marketplace/${listing.id}`) // (Ejemplo de ruta futura)
-    toast.success('¡Validado! Redirigiendo al pago...')
-    router.push('/prueba-de-venta')
+    try {
+        const result = await MarketplaceService.buyListing(listing.id);
+        if (result.success) {
+          toast.success(result.message || '¡Compra exitosa!')
+          // Redirige a "Mis Tickets" para ver el nuevo ticket
+          router.push('/profile/tickets')
+        }
+      } catch (error: any) {
+        console.error(error)
+        toast.error(error.message || 'Error al procesar la compra')
+      } finally {
+        setLoading(false)
+      }
   }
 
   return (
@@ -136,17 +157,16 @@ const ListingCard: React.FC<ListingCardProps> = ({
           )}
         </div>
         
-        {/* --- (4) BOTÓN ACTUALIZADO ---
-            Se quita 'asChild' y '<Link>', se añade 'onClick'
-        --- */}
+        {}
         <Button
           variant="primary"
           size="md"
           className="group"
           onClick={handleBuyClick} // Se llama a la nueva función
+          loading={loading}
         >
           Comprar
-          <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
+          {!loading && <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />}
         </Button>
       </CardFooter>
     </Card>

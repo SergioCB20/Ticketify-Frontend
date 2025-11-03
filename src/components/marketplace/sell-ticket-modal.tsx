@@ -1,4 +1,3 @@
-// src/components/marketplace/sell-ticket-modal.tsx
 'use client'
 
 import React, { useState } from 'react'
