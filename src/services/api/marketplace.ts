@@ -55,7 +55,7 @@ export class MarketplaceService {
   static async buyListing(listingId: string): Promise<{success: boolean, newTicketId: string}> {
     try {
       // Llama a POST /api/marketplace/listings/{listing_id}/buy
-      const response = await api.post(`${BASE_URL}/${listingId}/buy`);
+      const response = await api.post(`${BASE_URL}/listings/${listingId}/buy`);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
