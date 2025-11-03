@@ -3,12 +3,15 @@
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useRef } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, Button, Badge, Avatar, Input } from '@/components/ui'
+// Añadido 'CardDescription' aquí
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, Button, Badge, Avatar, Input } from '@/components/ui' 
 import { User, Mail, Phone, Calendar, Shield, MapPin, FileText, Edit2, Save, X, Eye, EyeOff, Camera } from 'lucide-react'
 import { Navbar } from '@/components/layout/navbar'
 import { Footer } from '@/components/layout/footer'
 import { AuthService } from '@/services/api/auth'
 import toast from 'react-hot-toast'
+import { Loader2, Ticket } from 'lucide-react' 
+import Link from 'next/link'
 
 export default function ProfilePage() {
   const { user, loading, isAuthenticated, updateUser } = useAuth()
@@ -211,7 +214,8 @@ export default function ProfilePage() {
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Sidebar con foto y info básica */}
-          <div className="lg:col-span-1">
+          {/* Añadido 'space-y-6' para separar las cards */}
+          <div className="lg:col-span-1 space-y-6"> 
             <Card>
               <CardContent className="pt-6">
                 <div className="flex flex-col items-center text-center">
@@ -307,12 +311,34 @@ export default function ProfilePage() {
                         Cancelar
                       </Button>
                     </div>
-                  )}
+                  )} 
                 </div>
               </CardContent>
             </Card>
-          </div>
 
+            {/* --- BLOQUE REUBICADO Y CORREGIDO --- */}
+            {/* Card de Navegación */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Navegación</CardTitle>
+                <CardDescription>
+                  Accede a otras secciones de tu perfil.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button asChild variant="outline" className="w-full justify-start text-base">
+                  <Link href="/profile/tickets">
+                    <Ticket className="w-4 h-4 mr-2" />
+                    Mis Tickets
+                  </Link>
+                </Button>
+                {/* (Puedes añadir más botones aquí en el futuro) */}
+              </CardContent>
+            </Card>
+            {/* --- FIN DEL BLOQUE CORREGIDO --- */}
+
+          </div> {/* Este </div> AHORA CIERRA la columna izquierda correctamente */}
+              
           {/* Contenido principal */}
           <div className="lg:col-span-2 space-y-6">
             {/* Información Personal */}

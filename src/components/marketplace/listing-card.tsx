@@ -52,7 +52,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
 
     // 2. Validar si tiene el rol de 'ATTENDEE'
     // Tu modelo de usuario del backend define 'ATTENDEE'
-    if (user && !user.roles.includes('Attendee')) {
+    if (user && !user.roles.includes('ATTENDEE')) {
       toast.error('Solo los asistentes pueden comprar tickets.')
       setLoading(false)
       return;

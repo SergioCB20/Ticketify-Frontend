@@ -11,6 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { formatDate } from '@/lib/utils'
+import { useAuth } from '@/hooks/useAuth'
+ 
 
 // --- Tipo de datos ---
 interface OrganizerEvent {
@@ -227,6 +229,9 @@ export default function OrganizerEventsPage() {
                         </span>
                       </div>
                     </CardContent>
+
+                      
+
 
                     <CardFooter className="p-0 flex flex-col sm:flex-row gap-3 mt-auto pt-4 border-t border-gray-100">
                       <Link href={`/organizer/events/${event.id}/edit`} className="w-full sm:w-auto flex-1" passHref>
