@@ -45,7 +45,7 @@ export class MarketplaceService {
   static async createListing(data: CreateListingData): Promise<MarketplaceListing> {
     try {
       // Llama a POST /api/marketplace/listings
-      const response = await api.post<MarketplaceListing>(BASE_URL, data);
+      const response = await api.post<MarketplaceListing>(`${BASE_URL}/listings`, data);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
