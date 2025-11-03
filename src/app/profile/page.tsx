@@ -316,27 +316,6 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
-            {/* --- BLOQUE REUBICADO Y CORREGIDO --- */}
-            {/* Card de Navegación */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Navegación</CardTitle>
-                <CardDescription>
-                  Accede a otras secciones de tu perfil.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button asChild variant="outline" className="w-full justify-start text-base">
-                  <Link href="/profile/tickets">
-                    <Ticket className="w-4 h-4 mr-2" />
-                    Mis Tickets
-                  </Link>
-                </Button>
-                {/* (Puedes añadir más botones aquí en el futuro) */}
-              </CardContent>
-            </Card>
-            {/* --- FIN DEL BLOQUE CORREGIDO --- */}
-
           </div> {/* Este </div> AHORA CIERRA la columna izquierda correctamente */}
               
           {/* Contenido principal */}

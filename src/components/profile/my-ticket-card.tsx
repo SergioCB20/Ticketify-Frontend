@@ -36,7 +36,7 @@ export function MyTicketCard({ ticket, onTicketListed }: MyTicketCardProps) {
         <CardContent className="flex-grow space-y-2">
           <div className="flex items-center text-sm text-gray-600">
             <Tag className="mr-2 h-4 w-4 text-primary-500" />
-            {ticket.ticketType.name}
+            {ticket.ticketType?.name}
           </div>
           <div className="flex items-center text-sm text-gray-600">
             <Calendar className="mr-2 h-4 w-4 text-primary-500" />

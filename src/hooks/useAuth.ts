@@ -1,3 +1,4 @@
+'use client'
 import { useState, useEffect } from 'react'
 import { AuthService } from '../services/api/auth'
 import type { User, LoginCredentials, RegisterData } from '../lib/types'
@@ -6,7 +7,7 @@ import { useRouter } from 'next/navigation'
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(true)
   const router = useRouter()
 
   // Verificar autenticación al montar el componente
