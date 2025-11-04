@@ -19,7 +19,7 @@ export const PromotionService = {
   // =========================================================
   async getByEvent(eventId: string): Promise<Promotion[]> {
     try {
-      const res = await api.get(`/events/${eventId}/promotions`)
+      const res = await api.get(`/promotions/events/${eventId}`)
       return res.data
     } catch (err) {
       throw handleApiError(err)

@@ -154,7 +154,7 @@ const Navbar: React.FC<NavbarProps> = ({
                 >
                   <DropdownItem
                     icon={<User className="w-4 h-4" />}
-                    onClick={() => router.push('/profile')}
+                    onClick={() => router.push('/panel/profile')}
                   >
                     Mi perfil
                   </DropdownItem>

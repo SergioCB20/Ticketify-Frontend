@@ -61,12 +61,12 @@ export const createEvent = async (eventData: EventCreate): Promise<Event> => {
 export class EventService {
     
   static async getAllByUser(userId: string) {
-    const res = await api.get(`/events/${userId}`)
+    const res = await api.get(`/events/organizer/${userId}`)
     return res.data
   }
 
    static async getPromotions(eventId: string) {
-    const res = await api.get(`/events/${eventId}/promotions`)
+    const res = await api.get(`/promotions/events/${eventId}`)
     return res.data
   }
    static async createPromotion(data: any) {
@@ -148,17 +148,6 @@ export class EventService {
       page,
       pageSize
     )
-  }
-
-  // ============= CREAR EVENTO =============
-
-  static async createEvent(data: EventCreate): Promise<Event> {
-    try {
-      const response = await api.post<Event>('/events/', data)
-      return response.data
-    } catch (error) {
-      throw handleApiError(error)
-    }
   }
 
   // ============= ACTUALIZAR EVENTO =============

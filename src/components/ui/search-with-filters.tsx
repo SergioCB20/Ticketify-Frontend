@@ -1,5 +1,3 @@
-'use client'
-
 import React, { useState, useRef, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { X } from 'lucide-react'
@@ -80,16 +78,6 @@ export const SearchWithFilters: React.FC<SearchWithFiltersProps> = ({
     onSearch(query, filters)
     setIsExpanded(false)
   }
-
-  // Ejecutar búsqueda cuando cambian los filtros
-  useEffect(() => {
-    if (Object.keys(filters.price || {}).length > 0 || 
-        (filters.categories && filters.categories.length > 0) ||
-        Object.keys(filters.date || {}).length > 0 ||
-        filters.location) {
-      onSearch(query, filters)
-    }
-  }, [filters])
 
   const handleCategoryToggle = (value: string) => {
     setFilters(prev => ({
