@@ -5,8 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, Button, Badge, Avatar, Input } from '@/components/ui'
 import { User, Mail, Phone, Calendar, Shield, MapPin, FileText, Edit2, Save, X, Eye, EyeOff, Camera } from 'lucide-react'
-import { Navbar } from '@/components/layout/navbar'
-import { Footer } from '@/components/layout/footer'
 import { AuthService } from '@/services/api/auth'
 import toast from 'react-hot-toast'
 
@@ -199,7 +197,6 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Navbar />
 
       <main className="flex-grow container mx-auto px-4 py-8 max-w-6xl">
         <div className="flex items-center justify-between mb-8">
@@ -635,8 +632,6 @@ export default function ProfilePage() {
           </div>
         </div>
       </main>
-
-      <Footer />
     </div>
   )
 }

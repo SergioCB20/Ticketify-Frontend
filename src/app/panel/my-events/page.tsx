@@ -39,10 +39,12 @@ export default function OrganizerEventsPage() {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('ticketify_access_token');
+      const user = localStorage.getItem('ticketify_user');
+      const id = user ? JSON.parse(user).id : null;
 
       if (!token) throw new Error('No hay token en localStorage');
 
-      const response = await fetch(`${API_URL}/api/events/organizer/me`, {
+      const response = await fetch(`${API_URL}/api/events/organizer/${id}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -99,7 +101,6 @@ export default function OrganizerEventsPage() {
   // --- Renderizado ---
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
-      <Navbar />
       <main className="flex-grow py-8 md:py-12">
         <Container>
           {/* Encabezado */}
@@ -108,7 +109,7 @@ export default function OrganizerEventsPage() {
               Mis Eventos
             </h1>
             {!isLoading && (
-              <Link href="/organizer/events/create" passHref>
+              <Link href="/panel/my-events/crear" passHref>
                 <Button variant="primary" size="lg" className="w-full md:w-auto shadow-md hover:shadow-lg transition-shadow">
                   <PlusCircle className="mr-2 h-5 w-5" />
                   Crear Nuevo Evento
@@ -229,12 +230,12 @@ export default function OrganizerEventsPage() {
                     </CardContent>
 
                     <CardFooter className="p-0 flex flex-col sm:flex-row gap-3 mt-auto pt-4 border-t border-gray-100">
-                      <Link href={`/organizer/events/${event.id}/edit`} className="w-full sm:w-auto flex-1" passHref>
+                      <Link href={`/panel/my-events/${event.id}/edit`} className="w-full sm:w-auto flex-1" passHref>
                         <Button variant="outline" size="sm" fullWidth className="font-medium text-gray-700 hover:bg-gray-50 rounded-lg">
                           Editar
                         </Button>
                       </Link>
-                      <Link href={`/organizer/events/${event.id}/dashboard`} className="w-full sm:w-auto flex-1" passHref>
+                      <Link href={`/organizer/events/${event.id}`} className="w-full sm:w-auto flex-1" passHref>
                         <Button variant="secondary" size="sm" fullWidth className="font-medium rounded-lg">
                           Ver Panel
                         </Button>
@@ -247,7 +248,6 @@ export default function OrganizerEventsPage() {
           )}
         </Container>
       </main>
-      <Footer />
     </div>
   )
 }

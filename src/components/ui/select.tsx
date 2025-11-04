@@ -12,14 +12,15 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
 }
 
 const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
-  ({ 
-    className, 
-    label, 
-    error, 
-    helperText, 
+  ({
+    className,
+    label,
+    error,
+    helperText,
     options,
     disabled,
-    ...props 
+    children,
+    ...props
   }, ref) => {
     const hasError = Boolean(error)
 
@@ -41,7 +42,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
               'w-full px-4 py-2.5 pr-10 rounded-lg border text-base appearance-none',
               'transition-all duration-200 cursor-pointer',
               'focus:outline-none focus:ring-2 focus:ring-offset-0',
-              
+
               // States
               !hasError && !disabled && [
                 'border-gray-300 bg-white text-gray-900',
@@ -56,18 +57,20 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
                 'bg-gray-100 text-gray-500 cursor-not-allowed',
                 'border-gray-200',
               ],
-              
+
               className
             )}
             ref={ref}
             disabled={disabled}
             {...props}
           >
-            {(options ?? []).map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
+            {children ? children : (
+              (options ?? []).map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))
+            )}
           </select>
 
           {/* Chevron Icon */}

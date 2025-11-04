@@ -7,27 +7,9 @@ import { StorageService } from '@/services/storage'
 import { Button } from '@/components/ui/button'
 import { Navbar } from '@/components/layout/navbar'
 import { toast } from 'react-hot-toast'
+import type { Event } from '@/lib/types/event'
+import type { Promotion } from '@/lib/types/promotion'
 import type { User } from '@/lib/types'
-
-interface Event {
-  id: string
-  title: string
-  venue: string
-  startDate: string
-}
-
-interface Promotion {
-  id: string
-  name: string
-  description?: string
-  code: string
-  promotion_type?: 'PERCENTAGE' | 'FIXED_AMOUNT'   // ✅ nuevo campo
-  discountValue: number
-  max_discount_amount?: number
-  min_purchase_amount?: number
-  startDate: string
-  endDate: string
-}
 
 
 interface PromotionsListProps {

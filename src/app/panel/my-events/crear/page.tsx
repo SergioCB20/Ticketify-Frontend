@@ -3,8 +3,6 @@
 import React, { useState, useEffect } from 'react'
 import { Upload, Repeat, AlertCircle, CheckCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { Navbar } from '@/components/layout/navbar'
-import { Footer } from '@/components/layout/footer'
 import { Container } from '@/components/ui/container'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
@@ -12,7 +10,8 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { createEvent} from '@/services/api/events'
-import { getCategories, type Category } from '@/services/api/categories'
+import { Category } from '@/lib/types/event'
+import { getCategories } from '@/services/api/categories'
 import { EventCreate } from '@/lib/types'
 
 // Componente Textarea personalizado (basado en Input)
@@ -107,8 +106,9 @@ export default function CrearEventoPage() {
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const data = await getCategories()
-        setCategories(data.categories)
+        const data:Category[] = await getCategories()
+        console.log(data)
+        setCategories([...data])
       } catch (err) {
         console.error('Error loading categories:', err)
       } finally {
@@ -253,7 +253,7 @@ export default function CrearEventoPage() {
       
       // Redirect to event detail or my events after 2 seconds
       setTimeout(() => {
-        router.push(`/events/${response.id}`)
+        router.push(`/panel/my-events`)
       }, 2000)
 
     } catch (err: any) {
@@ -271,7 +271,6 @@ export default function CrearEventoPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Navbar />
       
       <main className="flex-grow">
         <Container className="py-8">
@@ -618,8 +617,6 @@ export default function CrearEventoPage() {
           </Card>
         </Container>
       </main>
-
-      <Footer />
     </div>
   )
 }
