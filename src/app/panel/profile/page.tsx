@@ -3,10 +3,13 @@
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useRef } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, Button, Badge, Avatar, Input } from '@/components/ui'
+// Añadido 'CardDescription' aquí
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, Button, Badge, Avatar, Input } from '@/components/ui' 
 import { User, Mail, Phone, Calendar, Shield, MapPin, FileText, Edit2, Save, X, Eye, EyeOff, Camera } from 'lucide-react'
 import { AuthService } from '@/services/api/auth'
 import toast from 'react-hot-toast'
+import { Loader2, Ticket } from 'lucide-react' 
+import Link from 'next/link'
 
 export default function ProfilePage() {
   const { user, loading, isAuthenticated, updateUser } = useAuth()
@@ -208,7 +211,8 @@ export default function ProfilePage() {
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Sidebar con foto y info básica */}
-          <div className="lg:col-span-1">
+          {/* Añadido 'space-y-6' para separar las cards */}
+          <div className="lg:col-span-1 space-y-6"> 
             <Card>
               <CardContent className="pt-6">
                 <div className="flex flex-col items-center text-center">
@@ -304,12 +308,13 @@ export default function ProfilePage() {
                         Cancelar
                       </Button>
                     </div>
-                  )}
+                  )} 
                 </div>
               </CardContent>
             </Card>
-          </div>
 
+          </div> {/* Este </div> AHORA CIERRA la columna izquierda correctamente */}
+              
           {/* Contenido principal */}
           <div className="lg:col-span-2 space-y-6">
             {/* Información Personal */}

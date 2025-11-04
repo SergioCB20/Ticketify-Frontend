@@ -1,64 +1,65 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+// 1. Importar useCallback
+import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { Container } from '@/components/ui/container'
+import { useRouter } from 'next/navigation'
+import type { MyTicket } from '@/lib/types'
+import { TicketsService } from '@/services/api/tickets'
+import { MyTicketCard } from '@/components/profile/my-ticket-card'
+// 2. Quitar 'Ticket' (no usado)
+import { Loader2 } from 'lucide-react'
+import Link from 'next/link' // <-- ¡IMPORTAR LINK!
+import { Button } from '@/components/ui/button' // <-- ¡IMPORTAR BUTTON!
+import { Home } from 'lucide-react'
 
-interface Ticket {
-  id: string
-  event: {
-    id: string
-    title: string
-    startDate: string
-    venue: string
-    multimedia?: string[]
-  }
-  ticketType: {
-    name: string
-    price: number
-  }
-  qrCode: string
-  status: string
-  purchaseDate: string
-}
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+// 3. Eliminar API_URL (ya no se usa)
+// const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 export default function MyTicketsPage() {
-  const { user } = useAuth()
-  const [tickets, setTickets] = useState<Ticket[]>([])
+  // 4. Quitar 'user' de useAuth si no se usa directamente (authLoading sí se usa)
+  const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const router = useRouter() // router tampoco se usa, pero puede quedar por si se añade la redirección
+  const [tickets, setTickets] = useState<MyTicket[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'past'>('all')
 
-  useEffect(() => {
-    fetchTickets()
-  }, [user])
-
-  const fetchTickets = async () => {
-    if (!user) return
-
+  // Esto está correcto
+  const loadTickets = useCallback(async () => {
     setLoading(true)
+    setError(null)
     try {
-      const token = localStorage.getItem('ticketify_access_token')
-      const response = await fetch(`${API_URL}/tickets/user/${user.id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error('Error al cargar tickets')
-      }
-
-      const data = await response.json()
+      const data = await TicketsService.getMyTickets()
       setTickets(data)
-    } catch (error) {
-      console.error('Error loading tickets:', error)
+    } catch (err: any) {
+      setError(err.message || 'No se pudieron cargar tus tickets.')
     } finally {
       setLoading(false)
     }
-  }
+  }, []) // Dependencia vacía está bien
 
+  // Esto está correcto
+  useEffect(() => {
+    if (authLoading) return
+    if (!isAuthenticated) {
+      setLoading(false)
+      // Opcional: router.push('/login?redirect=/panel/my-tickets');
+      return
+    }
+    loadTickets()
+    // 5. Quitar 'router' de las dependencias si no se usa
+  }, [isAuthenticated, authLoading, loadTickets])
+  
+  // 6. Eliminar la función 'fetchTickets' (redundante)
+  /*
+  const fetchTickets = async () => {
+    ...
+  }
+  */
+
+  // Esto está correcto
   const getFilteredTickets = () => {
     const now = new Date()
     
@@ -73,56 +74,53 @@ export default function MyTicketsPage() {
   }
 
   const filteredTickets = getFilteredTickets()
+  
+  // Los comentarios de getStatus... están bien
 
-  const getStatusColor = (status: string) => {
-    switch (status.toUpperCase()) {
-      case 'ACTIVE':
-        return 'bg-green-100 text-green-800'
-      case 'USED':
-        return 'bg-gray-100 text-gray-800'
-      case 'CANCELLED':
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getStatusLabel = (status: string) => {
-    switch (status.toUpperCase()) {
-      case 'ACTIVE':
-        return 'Activo'
-      case 'USED':
-        return 'Usado'
-      case 'CANCELLED':
-        return 'Cancelado'
-      default:
-        return status
-    }
-  }
-
-  if (loading) {
+  // 7. Combinar 'loading' y 'authLoading' y usar el componente Loader2
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+          {/* Usar el Loader2 importado */}
+          <Loader2 className="w-12 h-12 text-primary-500 animate-spin mx-auto" />
           <p className="mt-4 text-gray-600">Cargando tus tickets...</p>
         </div>
       </div>
     )
   }
 
+  // El resto del código está perfecto
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center py-12 bg-white rounded-lg shadow p-8">
+          <h3 className="text-xl font-semibold text-gray-800">Ocurrió un error</h3>
+          <p className="text-gray-600">{error}</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <Container>
-        {/* Header */}
-        <div className="mb-8">
+    <div className="min-h-screen bg-gray-50">
+      <Container className="py-10">
+        <div className="space-y-6">
+
+          <div className="flex justify-end">
+            <Link href="/panel">
+              <Button variant="outline">
+                <Home size={18} className="mr-2" />
+                Volver al Incio
+              </Button>
+            </Link>
+        </div>
           <h1 className="text-3xl font-bold text-gray-900">Mis Tickets</h1>
-          <p className="mt-2 text-gray-600">
+          <p className="mt-2 text-gray-500">
             Administra y visualiza todos tus tickets de eventos
           </p>
         </div>
-
-        {/* Filtros */}
         <div className="mb-6 flex gap-2">
           <button
             onClick={() => setFilter('all')}
@@ -156,7 +154,6 @@ export default function MyTicketsPage() {
           </button>
         </div>
 
-        {/* Lista de tickets */}
         {filteredTickets.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg shadow">
             <svg
@@ -194,114 +191,11 @@ export default function MyTicketsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredTickets.map((ticket) => (
-              <div
-                key={ticket.id}
-                className="bg-white rounded-lg shadow overflow-hidden hover:shadow-lg transition-shadow"
-              >
-                {/* Imagen del evento */}
-                <div className="relative h-48">
-                  <img
-                    src={
-                      ticket.event.multimedia && ticket.event.multimedia.length > 0
-                        ? ticket.event.multimedia[0]
-                        : 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800'
-                    }
-                    alt={ticket.event.title}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-3 right-3">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                        ticket.status
-                      )}`}
-                    >
-                      {getStatusLabel(ticket.status)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Información del ticket */}
-                <div className="p-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
-                    {ticket.event.title}
-                  </h3>
-
-                  <div className="space-y-2 text-sm text-gray-600">
-                    <div className="flex items-center">
-                      <svg
-                        className="w-4 h-4 mr-2 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
-                      {new Date(ticket.event.startDate).toLocaleDateString('es-PE', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </div>
-
-                    <div className="flex items-center">
-                      <svg
-                        className="w-4 h-4 mr-2 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                      </svg>
-                      {ticket.event.venue}
-                    </div>
-
-                    <div className="flex items-center">
-                      <svg
-                        className="w-4 h-4 mr-2 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                        />
-                      </svg>
-                      {ticket.ticketType.name} - S/ {ticket.ticketType.price.toFixed(2)}
-                    </div>
-                  </div>
-
-                  {/* Botones de acción */}
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <button
-                      onClick={() => window.open(`/tickets/${ticket.id}`, '_blank')}
-                      className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm"
-                    >
-                      Ver ticket
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <MyTicketCard 
+                key={ticket.id} 
+                ticket={ticket}
+                onTicketListed={loadTickets} 
+              />
             ))}
           </div>
         )}
