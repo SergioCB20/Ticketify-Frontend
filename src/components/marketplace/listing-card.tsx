@@ -73,7 +73,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
         if (result.success) {
           toast.success(result.message || '¡Compra exitosa!')
           // Redirige a "Mis Tickets" para ver el nuevo ticket
-          router.push('/profile/tickets')
+          router.push('/panel/my-tickets')
         }
       } catch (error: any) {
         console.error(error)
