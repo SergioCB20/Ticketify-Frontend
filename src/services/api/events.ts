@@ -65,6 +65,11 @@ export class EventService {
     return res.data
   }
 
+  static async getActiveEvents() {
+    const res = await api.get(`/events/active`)
+    return res.data
+  }
+
    static async getPromotions(eventId: string) {
     const res = await api.get(`/promotions/events/${eventId}`)
     return res.data
@@ -132,6 +137,7 @@ export class EventService {
       throw handleApiError(error)
     }
   }
+
 
   // ============= OBTENER EVENTOS POR ORGANIZADOR =============
 
