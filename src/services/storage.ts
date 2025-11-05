@@ -49,10 +49,13 @@ export class StorageService {
   static getUser<T>(): T | null {
     if (typeof window !== 'undefined') {
       const user = localStorage.getItem(USER_KEY)
-      return user ? JSON.parse(user) : null
+      if (!user) return null
+      const parsed = JSON.parse(user)
+      return parsed.user || parsed // 👈 si viene anidado, devuelve el interno
     }
     return null
   }
+
 
   static removeUser(): void {
     if (typeof window !== 'undefined') {
