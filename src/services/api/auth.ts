@@ -144,6 +144,47 @@ export class AuthService {
     }
   }
 
+  // Subir foto de perfil (opción 1: archivo)
+  static async uploadPhoto(file: File): Promise<{ photoUrl: string; message: string }> {
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      
+      const response = await api.post<{ photoUrl: string; message: string }>(
+        '/auth/upload-photo',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      )
+      
+      // Actualizar usuario en localStorage con la nueva foto
+      const currentUser = StorageService.getUser<User>()
+      if (currentUser) {
+        currentUser.profilePhoto = response.data.photoUrl
+        StorageService.setUser(currentUser)
+      }
+      
+      return response.data
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  }
+
+  // Actualizar foto en perfil (opción 2: base64 en PUT)
+  static async updateProfileWithPhoto(userData: Partial<User> & { profilePhoto?: string | null }): Promise<User> {
+    try {
+      const response = await api.put<User>('/auth/profile', userData)
+      // Actualizar usuario en localStorage
+      StorageService.setUser(response.data)
+      return response.data
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  }
+
   // Eliminar cuenta
   static async deleteAccount(): Promise<void> {
     try {

@@ -1,49 +1,13 @@
-/**
- * Categories API Service
- * Handles all API calls related to event categories
- */
+import { Category } from '@/lib/types/event'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
-// Types
-export interface Category {
-  id: string
-  name: string
-  description: string | null
-  slug: string
-  icon: string | null
-  color: string | null
-  imageUrl: string | null
-  metaTitle: string | null
-  metaDescription: string | null
-  parentId: string | null
-  sortOrder: number
-  level: number
-  isActive: boolean
-  isFeatured: boolean
-  eventCount: number
-  createdAt: string
-  updatedAt: string
-}
 
-export interface CategoriesResponse {
-  categories: Category[]
-  total: number
-}
-
-/**
- * Get all categories
- */
-export async function getCategories(activeOnly: boolean = true): Promise<CategoriesResponse> {
+export async function getCategories(activeOnly: boolean = true): Promise<Category[]> {
   try {
     const response = await fetch(
-      `${API_BASE_URL}/categories/?active_only=${activeOnly}`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
+      `${API_BASE_URL}/categories/?is_active=${activeOnly}`,
+      { /* ... headers ... */ }
     )
 
     if (!response.ok) {
@@ -51,7 +15,12 @@ export async function getCategories(activeOnly: boolean = true): Promise<Categor
       throw new Error(error.detail || 'Error al obtener las categorías')
     }
 
-    return await response.json()
+    const data = await response.json() 
+    console.log('Fetched categories data:', data) // Esto muestra (6) [...]
+    
+    // ✅ LA SOLUCIÓN: Devuelve el array directamente
+    return data 
+
   } catch (error) {
     console.error('Error fetching categories:', error)
     throw error

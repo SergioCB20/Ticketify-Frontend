@@ -31,8 +31,8 @@ const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
       sm: 'h-8 w-8 text-sm',
       md: 'h-10 w-10 text-base',
       lg: 'h-12 w-12 text-lg',
-      xl: 'h-16 w-16 text-xl',
-      '2xl': 'h-20 w-20 text-2xl',
+      xl: 'h-24 w-24 text-2xl',
+      '2xl': 'h-32 w-32 text-3xl',
     }
 
     const avatarShapes = {
