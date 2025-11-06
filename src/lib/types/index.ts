@@ -115,6 +115,9 @@ export interface Ticket {
   qrCode?: string
 }
 
+// Tipos de tipos de entrada (ticket types)
+export * from './ticketType'
+
 // Tipos de respuesta de la API
 export interface ApiResponse<T = any> {
   success: boolean

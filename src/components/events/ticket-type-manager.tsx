@@ -275,6 +275,34 @@ export function TicketTypeManager({ ticketTypes, onChange, errors = {} }: Ticket
           </CardContent>
         </Card>
       )}
+
+      {/* Resumen de Tickets */}
+      {ticketTypes.length > 0 && (
+        <div className="mt-4 bg-gradient-to-r from-primary-50 to-blue-50 border border-primary-200 rounded-lg p-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
+            <div>
+              <div className="text-sm text-gray-600 mb-1">Total Tipos</div>
+              <div className="text-2xl font-bold text-primary-600">{ticketTypes.length}</div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-600 mb-1">Total Tickets</div>
+              <div className="text-2xl font-bold text-primary-600">
+                {ticketTypes.reduce((sum, tt) => sum + parseInt(tt.quantity || '0'), 0)}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-600 mb-1">Recaudación Máx.</div>
+              <div className="text-2xl font-bold text-green-600">
+                S/ {formatPrice(
+                  ticketTypes.reduce((sum, tt) => 
+                    sum + (parseFloat(tt.price || '0') * parseInt(tt.quantity || '0')), 0
+                  ).toString()
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

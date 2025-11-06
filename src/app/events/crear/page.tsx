@@ -13,6 +13,9 @@ import { Select } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { createEvent, type EventCreateData } from '@/services/api/events'
 import { getCategories, type Category } from '@/services/api/categories'
+import { TicketTypeService } from '@/services/api/ticketTypes'
+import { TicketTypeManager } from '@/components/events/ticket-type-manager'
+import type { TicketTypeFormData, TicketTypeCreate } from '@/lib/types'
 
 // Componente Textarea personalizado (basado en Input)
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -73,6 +76,7 @@ export default function CrearEventoPage() {
   const [success, setSuccess] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [loadingCategories, setLoadingCategories] = useState(true)
+  const [ticketTypes, setTicketTypes] = useState<TicketTypeFormData[]>([])
   
   const [formData, setFormData] = useState({
     nombre: '',
@@ -199,6 +203,19 @@ export default function CrearEventoPage() {
       newErrors.capacidad = 'La capacidad debe ser mayor a 0'
     }
 
+    // Validate ticket types
+    if (ticketTypes.length === 0) {
+      newErrors.ticketTypes = 'Debes agregar al menos un tipo de entrada'
+    } else {
+      // Validate total capacity
+      const totalTicketCapacity = ticketTypes.reduce((sum, tt) => sum + parseInt(tt.quantity || '0'), 0)
+      const eventCapacity = parseInt(formData.capacidad)
+      
+      if (totalTicketCapacity > eventCapacity) {
+        newErrors.ticketTypes = `La suma de las cantidades de los tipos de entrada (${totalTicketCapacity}) no puede superar la capacidad total del evento (${eventCapacity})`
+      }
+    }
+
     // Validate dates
     const startDate = new Date(constructDateISO(formData.fechaInicio))
     const endDate = new Date(constructDateISO(formData.fechaFin))
@@ -247,6 +264,17 @@ export default function CrearEventoPage() {
 
       // Create event
       const response = await createEvent(eventData)
+
+      // Create ticket types
+      const ticketTypesData: TicketTypeCreate[] = ticketTypes.map(tt => ({
+        name: tt.name,
+        description: tt.description || undefined,
+        price: parseFloat(tt.price),
+        quantity: parseInt(tt.quantity),
+        maxPerPurchase: tt.maxPerPurchase ? parseInt(tt.maxPerPurchase) : undefined
+      }))
+
+      await TicketTypeService.createTicketTypes(response.id, ticketTypesData)
 
       setSuccess(true)
       
@@ -360,19 +388,46 @@ export default function CrearEventoPage() {
                     error={errors.ubicacion}
                   />
 
-                  <Input
-                    label={
-                      <>
-                        Capacidad Total <span className="text-red-500">*</span>
-                      </>
-                    }
-                    type="number"
-                    min="1"
-                    placeholder="Ej: 5000"
-                    value={formData.capacidad}
-                    onChange={(e) => handleInputChange('capacidad', e.target.value)}
-                    error={errors.capacidad}
-                  />
+                  <div>
+                    <Input
+                      label={
+                        <>
+                          Capacidad Total <span className="text-red-500">*</span>
+                        </>
+                      }
+                      type="number"
+                      min="1"
+                      placeholder="Ej: 5000"
+                      value={formData.capacidad}
+                      onChange={(e) => handleInputChange('capacidad', e.target.value)}
+                      error={errors.capacidad}
+                    />
+                    {ticketTypes.length > 0 && formData.capacidad && (
+                      <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex justify-between text-sm text-gray-600 mb-2">
+                          <span>Aforo configurado: {ticketTypes.reduce((sum, tt) => sum + parseInt(tt.quantity || '0'), 0)} / {formData.capacidad}</span>
+                          <span className={ticketTypes.reduce((sum, tt) => sum + parseInt(tt.quantity || '0'), 0) > parseInt(formData.capacidad) ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}>
+                            {((ticketTypes.reduce((sum, tt) => sum + parseInt(tt.quantity || '0'), 0) / parseInt(formData.capacidad)) * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full transition-all ${
+                              ticketTypes.reduce((sum, tt) => sum + parseInt(tt.quantity || '0'), 0) > parseInt(formData.capacidad) 
+                                ? 'bg-red-500' 
+                                : 'bg-green-500'
+                            }`}
+                            style={{ 
+                              width: `${Math.min(
+                                100, 
+                                (ticketTypes.reduce((sum, tt) => sum + parseInt(tt.quantity || '0'), 0) / parseInt(formData.capacidad)) * 100
+                              )}%` 
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
                   <Textarea
                     label="Información adicional"
@@ -591,6 +646,15 @@ export default function CrearEventoPage() {
                     <p className="mt-1 text-sm text-red-600">{errors.fechaFin}</p>
                   )}
                 </div>
+              </div>
+
+              {/* Sección de Tipos de Entrada */}
+              <div className="mt-8 pt-6 border-t-2 border-gray-300">
+                <TicketTypeManager
+                  ticketTypes={ticketTypes}
+                  onChange={setTicketTypes}
+                  errors={errors}
+                />
               </div>
 
               {/* Botones de acción */}
