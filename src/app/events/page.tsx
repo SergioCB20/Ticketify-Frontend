@@ -27,7 +27,7 @@ interface Event {
   status: string
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
 export default function EventsPage() {
   const searchParams = useSearchParams()
@@ -70,7 +70,7 @@ export default function EventsPage() {
         // Decidir qué endpoint usar
         const endpoint = params.toString() 
           ? `${API_URL}/events/search?${params.toString()}`
-          : `${API_URL}/events`
+          : `${API_URL}/events/`
 
         console.log('Fetching from:', endpoint)
         const response = await fetch(endpoint)

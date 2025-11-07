@@ -1,14 +1,16 @@
-
 'use client'
 
 import React, { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import type { MyTicket } from '@/lib/types'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { formatDate } from '@/lib/utils'
-import { Calendar, MapPin, Tag, Percent } from 'lucide-react'
+import { Calendar, MapPin, Tag, Percent, X } from 'lucide-react'
 import { SellTicketModal } from '@/components/marketplace/sell-ticket-modal'
+import { MarketplaceService } from '@/services/api/marketplace'
+import { toast } from 'react-hot-toast'
 
 interface MyTicketCardProps {
   ticket: MyTicket
@@ -16,10 +18,34 @@ interface MyTicketCardProps {
 }
 
 export function MyTicketCard({ ticket, onTicketListed }: MyTicketCardProps) {
+  const router = useRouter()
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isDelisting, setIsDelisting] = useState(false)
 
+  // ✅ Lógica simplificada: el ticket se mantiene ACTIVE hasta que se venda
   const canBeSold = ticket.status === 'ACTIVE' && !ticket.isListed;
+  const canBeDelisted = ticket.isListed; // Si está listado, se puede retirar
   const isSold = ticket.status === 'TRANSFERRED';
+
+
+
+  const handleDelistTicket = async () => {
+    if (!ticket.listingId) {
+      toast.error('No se encontró el ID del listing')
+      return
+    }
+
+    setIsDelisting(true)
+    try {
+      await MarketplaceService.cancelListing(ticket.listingId)
+      toast.success('¡Entrada retirada del marketplace!')
+      onTicketListed() // Refrescar la lista
+    } catch (error: any) {
+      toast.error(error.message || 'Error al retirar la entrada')
+    } finally {
+      setIsDelisting(false)
+    }
+  }
 
   return (
     <>
@@ -27,7 +53,7 @@ export function MyTicketCard({ ticket, onTicketListed }: MyTicketCardProps) {
         <CardHeader className="pb-3">
           <h3 className="font-semibold text-lg text-gray-900">{ticket.event.title}</h3>
           <Badge 
-            variant={canBeSold ? "success" : "default"}
+            variant={canBeSold ? "success" : ticket.isListed ? "warning" : "default"}
             className="w-fit"
           >
             {ticket.isListed ? "Publicado en Marketplace" : (isSold ? "Vendido/Transferido" : ticket.status)}
@@ -47,7 +73,16 @@ export function MyTicketCard({ ticket, onTicketListed }: MyTicketCardProps) {
             {ticket.event.venue}
           </div>
         </CardContent>
-        <CardFooter>
+        <CardFooter className="flex flex-col gap-2">
+          {/* Botón para ver detalles del ticket */}
+          <Button 
+            variant="outline" 
+            className="w-full"
+            onClick={() => router.push(`/panel/my-tickets/${ticket.id}`)}
+          >
+            Ver Detalles
+          </Button>
+          
           {canBeSold && (
             <Button 
               variant="primary" 
@@ -58,14 +93,15 @@ export function MyTicketCard({ ticket, onTicketListed }: MyTicketCardProps) {
               Vender en Marketplace
             </Button>
           )}
-          {ticket.isListed && (
-            <Button variant="outline" className="w-full" disabled>
-              Publicado
-            </Button>
-          )}
-          {!canBeSold && !ticket.isListed && (
-            <Button variant="ghost" className="w-full" disabled>
-              No se puede vender
+          {canBeDelisted && (
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              onClick={handleDelistTicket}
+              disabled={isDelisting}
+            >
+              <X className="w-4 h-4 mr-2" />
+              {isDelisting ? 'Retirando...' : 'Retirar del Marketplace'}
             </Button>
           )}
         </CardFooter>
