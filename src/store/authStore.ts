@@ -1,1 +1,0 @@
-// Estados globales de autenticación

@@ -45,7 +45,6 @@ export async function getCategories(activeOnly: boolean = true): Promise<Categor
         },
       }
     )
-
     if (!response.ok) {
       const error = await response.json()
       throw new Error(error.detail || 'Error al obtener las categorías')

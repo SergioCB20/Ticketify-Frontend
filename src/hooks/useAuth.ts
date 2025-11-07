@@ -1,3 +1,4 @@
+'use client'
 import { useState, useEffect } from 'react'
 import { AuthService } from '../services/api/auth'
 import type { User, LoginCredentials, RegisterData } from '../lib/types'
@@ -49,15 +50,11 @@ export function useAuth() {
   const logout = async () => {
     try {
       await AuthService.logout()
-      setUser(null)
-      setIsAuthenticated(false)
-      router.push('/login')
     } catch (error) {
       console.error('Error during logout:', error)
-      // Aún así limpiar el estado local
+    } finally {
       setUser(null)
       setIsAuthenticated(false)
-      router.push('/login')
     }
   }
 

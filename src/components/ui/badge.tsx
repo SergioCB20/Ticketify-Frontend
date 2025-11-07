@@ -3,11 +3,12 @@ import { cn } from '@/lib/utils'
 
 interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: 'default' | 'success' | 'destructive' | 'warning' | 'violet' | 'blue' | 'orange' | 'cyan'
+  size?: 'sm' | 'md' | 'lg'
   children: React.ReactNode
 }
 
 const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
-  ({ className, variant = 'default', children, ...props }, ref) => {
+  ({ className, variant = 'default',size = 'md', children, ...props }, ref) => {
     const variantStyles = {
       default: 'bg-gray-100 text-gray-800 border-gray-200',
       success: 'bg-green-100 text-green-800 border-green-200',
@@ -19,12 +20,19 @@ const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
       cyan: 'bg-cyan-100 text-cyan-800 border-cyan-200',
     }
 
+    const sizeStyles = {
+      sm: 'px-2 py-0.5 text-xs',
+      md: 'px-2.5 py-0.5 text-xs',
+      lg: 'px-3 py-1 text-sm',
+    }
+
     return (
       <div
         ref={ref}
         className={cn(
-          'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border',
+          'inline-flex items-center rounded-full font-medium border',
           variantStyles[variant],
+          sizeStyles[size],
           className
         )}
         {...props}

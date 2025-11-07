@@ -1,120 +1,26 @@
-// Tipos de usuario
-export interface User {
-  id: string
-  firstName: string
-  lastName: string
-  email: string
-  phoneNumber?: string
-  documentId?: string
-  profilePhoto?: string
-  isActive: boolean
-  createdAt: string
-  lastLogin?: string
-  roles?: string[]
-}
+// ============================================
+// TICKETIFY TYPES - Punto de entrada principal
+// ============================================
+// Este archivo re-exporta todos los tipos desde archivos separados
+// Uso: import { User, Event, AdminStats } from '@/lib/types'
+
+// Tipos de usuarios
+export * from './user'
 
 // Tipos de autenticación
-export interface AuthResponse {
-  user: User
-  accessToken: string
-  refreshToken: string
-}
+export * from './auth'
 
-export interface LoginCredentials {
-  email: string
-  password: string
-}
+// Tipos de administración
+export * from './admin'
 
-export interface RegisterData {
-  email: string
-  password: string
-  firstName: string
-  lastName: string
-  userType: 'ATTENDEE' | 'ORGANIZER'
-  phoneNumber?: string
-  documentType: 'DNI' | 'CE' | 'Pasaporte'
-  documentId: string
-  country: string
-  city: string
-  gender: 'masculino' | 'femenino' | 'otro' | 'prefiero-no-decir'
-  acceptTerms: boolean
-  acceptMarketing?: boolean
-}
-
-// Tipos de Admin
-export interface AdminUser {
-  id: string
-  email: string
-  firstName: string
-  lastName: string
-  phoneNumber?: string
-  isActive: boolean
-  roles: string[]
-  createdAt: string
-  lastLogin?: string
-}
-
-export interface PaginatedUsers {
-  users: User[]
-  total: number
-  page: number
-  pageSize: number
-  totalPages: number
-}
-
-export interface AdminStats {
-  totalUsers: number
-  activeUsers: number
-  bannedUsers: number
-  totalAdmins: number
-  activeAdmins: number
-  totalEvents: number
-  totalTickets: number
-  recentRegistrations: number
-}
-
-export interface BanUserRequest {
-  isActive: boolean
-  reason?: string
-}
-
-export interface UpdateAdminRoleRequest {
-  role: 'SUPER_ADMIN' | 'SUPPORT_ADMIN' | 'SECURITY_ADMIN' | 'CONTENT_ADMIN'
-}
-
-// Tipos de eventos (para referencia futura)
-export interface Event {
-  id: string
-  title: string
-  description: string
-  date: string
-  location: string
-  price: number
-  capacity: number
-  availableTickets: number
-  organizerId: string
-  organizer: User
-  imageUrl?: string
-  category: string
-  status: 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED'
-  createdAt: string
-  updatedAt: string
-}
+// Tipos de eventos
+export * from './event'
 
 // Tipos de tickets
-export interface Ticket {
-  id: string
-  eventId: string
-  event: Event
-  userId: string
-  user: User
-  quantity: number
-  totalPrice: number
-  status: 'RESERVED' | 'PURCHASED' | 'CANCELLED'
-  purchaseDate: string
-  qrCode?: string
-}
+export * from './ticket'
 
+// Tipos de marketplace
+export * from './marketplace'
 // Tipos de tipos de entrada (ticket types)
 export * from './ticketType'
 
@@ -125,29 +31,8 @@ export interface ApiResponse<T = any> {
   message?: string
   errors?: Record<string, string[]>
 }
+// Tipos de promociones
+export * from './promotion'
 
-export interface ApiError {
-  message: string
-  errors?: Record<string, string[]>
-  status?: number
-}
-
-// Tipos de paginación
-export interface PaginatedResponse<T> {
-  data: T[]
-  totalItems: number
-  totalPages: number
-  currentPage: number
-  itemsPerPage: number
-}
-
-// Tipos de filtros y búsqueda
-export interface EventFilters {
-  category?: string
-  location?: string
-  priceMin?: number
-  priceMax?: number
-  dateFrom?: string
-  dateTo?: string
-  search?: string
-}
+// Tipos de API y respuestas comunes
+export * from './api'
