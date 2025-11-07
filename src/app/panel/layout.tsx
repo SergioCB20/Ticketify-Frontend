@@ -42,7 +42,7 @@ export default function PanelLayout({
   }
 
   // Verificar si el usuario es organizador
-  const isOrganizer = user?.roles?.includes('Organizer')
+  const isOrganizer = user?.roles?.includes('ORGANIZER')
 
   // Configuración de navegación según el rol
   const navigation = isOrganizer
