@@ -11,7 +11,6 @@ import type { Event } from '@/lib/types/event'
 import type { Promotion } from '@/lib/types/promotion'
 import type { User } from '@/lib/types'
 
-
 interface PromotionsListProps {
   promotions: Promotion[]
   selectedEvent: Event
@@ -45,10 +44,7 @@ export default function PromotionsPage() {
         return
       }
 
-      console.log('📡 Solicitando eventos del usuario:', user.id)
       const data = await EventService.getAllByUser(user.id)
-      console.log('✅ Eventos recibidos:', data)
-
       setEvents(data)
       if (data.length === 0) toast('No hay eventos disponibles')
     } catch (err: any) {
@@ -69,8 +65,17 @@ export default function PromotionsPage() {
       setError(null)
 
       const data = await PromotionService.getByEvent(eventId)
-      setPromotions(data)
-      console.log('🎟️ Promociones recibidas:', data)
+
+      // 🧠 Normaliza nombres y formato de fechas
+      const normalized = data.map((p: any) => ({
+        ...p,
+        discountValue: p.discount_value ?? 0,
+        startDate: p.start_date ? new Date(p.start_date).toISOString() : '',
+        endDate: p.end_date ? new Date(p.end_date).toISOString() : '',
+      }))
+
+      setPromotions(normalized)
+      console.log('🎟️ Promociones normalizadas:', normalized)
     } catch (err: any) {
       const msg = err?.response?.data?.detail || 'Error al obtener promociones'
       console.error('❌', msg)
@@ -82,7 +87,7 @@ export default function PromotionsPage() {
   }
 
   // ========================================
-  // 🔹 Crear promoción temporal (dummy)
+  // 🔹 Crear promoción
   // ========================================
   const handleAddPromotion = async () => {
     try {
@@ -115,7 +120,7 @@ export default function PromotionsPage() {
       await PromotionService.create(newPromo)
       toast.success('Promoción creada correctamente', { id: 'promo' })
 
-      fetchPromotions(selectedEvent.id)
+      await fetchPromotions(selectedEvent.id)
     } catch (err: any) {
       const msg = err?.response?.data?.detail || 'Error al crear promoción'
       toast.error(msg, { id: 'promo' })
@@ -133,7 +138,7 @@ export default function PromotionsPage() {
       toast.loading('Eliminando promoción...', { id: 'promo' })
       await PromotionService.delete(id)
       toast.success('Promoción eliminada', { id: 'promo' })
-      if (selectedEvent) fetchPromotions(selectedEvent.id)
+      if (selectedEvent) await fetchPromotions(selectedEvent.id)
     } catch (err: any) {
       toast.error('No se pudo eliminar la promoción', { id: 'promo' })
     }
@@ -209,25 +214,25 @@ function PromotionsList({
     if (!editedPromo) return
     try {
       toast.loading('Guardando cambios...', { id: 'edit' })
+
       await PromotionService.update(editedPromo.id, {
         name: editedPromo.name,
         description: editedPromo.description,
         code: editedPromo.code,
         promotion_type: (editedPromo as any).promotion_type,
-        discount_value: (editedPromo as any).discountValue,
-        start_date: (editedPromo as any).startDate,
-        end_date: (editedPromo as any).endDate,
+        discount_value: Number((editedPromo as any).discountValue),
+        start_date: new Date((editedPromo as any).startDate).toISOString(),
+        end_date: new Date((editedPromo as any).endDate).toISOString(),
       })
+
       toast.success('Promoción actualizada ✅', { id: 'edit' })
+      await fetchPromotions(selectedEvent.id)
       setEditingId(null)
-      fetchPromotions(selectedEvent.id)
-    } catch {
+      setEditedPromo(null)
+    } catch (err) {
+      console.error('❌ Error al actualizar promoción:', err)
       toast.error('Error al actualizar promoción', { id: 'edit' })
     }
-  }
-
-  if (!promotions.length) {
-    <p className="text-gray-500 italic">No hay promociones disponibles.</p>
   }
 
   return (
@@ -236,214 +241,213 @@ function PromotionsList({
         Promociones de {selectedEvent.title}
       </h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {promotions.map((promo: any) => (
-          <div
-            key={promo.id}
-            className={`border rounded-xl p-5 transition ${
-              editingId === promo.id
-                ? 'bg-yellow-50 border-yellow-300'
-                : 'bg-white border-gray-200 hover:shadow-md'
-            }`}
-          >
-            {editingId === promo.id ? (
-              <>
-                {/* 🧾 Nombre */}
-                <label className="text-sm font-medium text-gray-700">
-                  Nombre
-                </label>
-                <input
-                  type="text"
-                  value={editedPromo?.name || ''}
-                  onChange={(e) =>
-                    setEditedPromo({ ...editedPromo!, name: e.target.value })
-                  }
-                  className="w-full mb-2 border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500"
-                />
+      {/* === PROMOCIONES EXISTENTES === */}
+      {promotions.length === 0 ? (
+        <p className="text-gray-500 italic mb-6">
+          No hay promociones disponibles para este evento.
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {promotions.map((promo: any) => (
+            <div
+              key={promo.id}
+              className={`border rounded-xl p-5 transition ${
+                editingId === promo.id
+                  ? 'bg-yellow-50 border-yellow-300'
+                  : 'bg-white border-gray-200 hover:shadow-md'
+              }`}
+            >
+              {editingId === promo.id ? (
+                <>
+                  {/* === CAMPOS DE EDICIÓN === */}
+                  <label className="text-sm font-medium text-gray-700">Nombre</label>
+                  <input
+                    type="text"
+                    value={editedPromo?.name || ''}
+                    onChange={(e) =>
+                      setEditedPromo({ ...editedPromo!, name: e.target.value })
+                    }
+                    className="w-full mb-2 border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500"
+                  />
 
-                {/* 📝 Descripción */}
-                <label className="text-sm font-medium text-gray-700">
-                  Descripción
-                </label>
-                <textarea
-                  value={editedPromo?.description || ''}
-                  onChange={(e) =>
-                    setEditedPromo({ ...editedPromo!, description: e.target.value })
-                  }
-                  className="w-full mb-2 border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500"
-                />
+                  <label className="text-sm font-medium text-gray-700">
+                    Descripción
+                  </label>
+                  <textarea
+                    value={editedPromo?.description || ''}
+                    onChange={(e) =>
+                      setEditedPromo({
+                        ...editedPromo!,
+                        description: e.target.value,
+                      })
+                    }
+                    className="w-full mb-2 border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500"
+                  />
 
-                {/* 🧾 Código */}
-                <label className="text-sm font-medium text-gray-700">Código</label>
-                <input
-                  type="text"
-                  value={editedPromo?.code || ''}
-                  onChange={(e) =>
-                    setEditedPromo({ ...editedPromo!, code: e.target.value })
-                  }
-                  className="w-full mb-2 border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500"
-                />
+                  <label className="text-sm font-medium text-gray-700">Código</label>
+                  <input
+                    type="text"
+                    value={editedPromo?.code || ''}
+                    onChange={(e) =>
+                      setEditedPromo({ ...editedPromo!, code: e.target.value })
+                    }
+                    className="w-full mb-2 border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500"
+                  />
 
-                {/* 🔢 Tipo */}
-                <label className="text-sm font-medium text-gray-700">Tipo</label>
-                <select
-                  value={(editedPromo as any).promotion_type || 'PERCENTAGE'}
-                  onChange={(e) =>
-                    setEditedPromo({
-                      ...editedPromo!,
-                      promotion_type: e.target.value as 'PERCENTAGE' | 'FIXED_AMOUNT',
-                    })
-                  }
-                  className="w-full mb-2 border border-gray-300 rounded-md px-3 py-2"
-                >
-                  <option value="PERCENTAGE">Porcentaje (%)</option>
-                  <option value="FIXED_AMOUNT">Monto fijo (S/)</option>
-                </select>
+                  <label className="text-sm font-medium text-gray-700">Tipo</label>
+                  <select
+                    value={(editedPromo as any).promotion_type || 'PERCENTAGE'}
+                    onChange={(e) =>
+                      setEditedPromo({
+                        ...editedPromo!,
+                        promotion_type: e.target.value as
+                          | 'PERCENTAGE'
+                          | 'FIXED_AMOUNT',
+                      })
+                    }
+                    className="w-full mb-2 border border-gray-300 rounded-md px-3 py-2"
+                  >
+                    <option value="PERCENTAGE">Porcentaje (%)</option>
+                    <option value="FIXED_AMOUNT">Monto fijo (S/)</option>
+                  </select>
 
-                {/* 💰 Valor */}
-                <label className="text-sm font-medium text-gray-700">
-                  {((editedPromo as any).promotion_type || 'PERCENTAGE') ===
-                  'PERCENTAGE'
-                    ? 'Porcentaje de descuento (%)'
-                    : 'Monto de descuento (S/)'}
+                  <label className="text-sm font-medium text-gray-700">
+                    {((editedPromo as any).promotion_type || 'PERCENTAGE') ===
+                    'PERCENTAGE'
+                      ? 'Porcentaje de descuento (%)'
+                      : 'Monto de descuento (S/)'}
 
-                </label>
-                <input
-                  type="number"
-                  value={(editedPromo as any).discountValue || 0}
-                  onChange={(e) =>
-                    setEditedPromo({
-                      ...editedPromo!,
-                      discountValue: Number(e.target.value),
-                    })
-                  }
-                  className="w-full mb-2 border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500"
-                />
+                  </label>
+                  <input
+                    type="number"
+                    value={(editedPromo as any).discountValue || 0}
+                    onChange={(e) =>
+                      setEditedPromo({
+                        ...editedPromo!,
+                        discountValue: Number(e.target.value),
+                      })
+                    }
+                    className="w-full mb-2 border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500"
+                  />
 
-                {/* 🗓️ Fecha inicio */}
-                <label className="text-sm font-medium text-gray-700">
-                  Fecha inicio
-                </label>
-                <input
-                  type="datetime-local"
-                  value={
-                    (editedPromo as any).startDate
-                      ? new Date((editedPromo as any).startDate)
-                          .toISOString()
-                          .slice(0, 16)
-                      : ''
-                  }
-                  onChange={(e) =>
-                    setEditedPromo({
-                      ...editedPromo!,
-                      startDate: new Date(e.target.value).toISOString(),
-                    })
-                  }
-                  className="w-full mb-2 border border-gray-300 rounded-md px-3 py-2"
-                />
+                  <label className="text-sm font-medium text-gray-700">Fecha inicio</label>
+                  <input
+                    type="datetime-local"
+                    value={
+                      editedPromo?.startDate
+                        ? editedPromo.startDate.slice(0, 16)
+                        : ''
+                    }
+                    onChange={(e) =>
+                      setEditedPromo({
+                        ...editedPromo!,
+                        startDate: new Date(e.target.value).toISOString(),
+                      })
+                    }
+                    className="w-full mb-2 border border-gray-300 rounded-md px-3 py-2"
+                  />
 
-                {/* 🗓️ Fecha fin */}
-                <label className="text-sm font-medium text-gray-700">
-                  Fecha fin
-                </label>
-                <input
-                  type="datetime-local"
-                  value={
-                    (editedPromo as any).endDate
-                      ? new Date((editedPromo as any).endDate)
-                          .toISOString()
-                          .slice(0, 16)
-                      : ''
-                  }
-                  onChange={(e) =>
-                    setEditedPromo({
-                      ...editedPromo!,
-                      endDate: new Date(e.target.value).toISOString(),
-                    })
-                  }
-                  className="w-full mb-4 border border-gray-300 rounded-md px-3 py-2"
-                />
+                  <label className="text-sm font-medium text-gray-700">Fecha fin</label>
+                  <input
+                    type="datetime-local"
+                    value={
+                      editedPromo?.endDate
+                        ? editedPromo.endDate.slice(0, 16)
+                        : ''
+                    }
+                    onChange={(e) =>
+                      setEditedPromo({
+                        ...editedPromo!,
+                        endDate: new Date(e.target.value).toISOString(),
+                      })
+                    }
+                    className="w-full mb-4 border border-gray-300 rounded-md px-3 py-2"
+                  />
 
-                <div className="flex justify-end gap-2">
-                  <Button variant="success" onClick={handleSave}>
-                    💾 Guardar
-                  </Button>
-                  <Button variant="ghost" onClick={handleCancel}>
-                    ✖️ Cancelar
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                <h3 className="text-lg font-bold text-violet-600 mb-1">
-                  {promo.name}
-                </h3>
-                <p className="text-gray-600 mb-2">{promo.description}</p>
-                <p className="text-sm text-gray-500">
-                  Código: <b>{promo.code}</b>
-                </p>
-                <p className="text-sm text-gray-500">
-                  Tipo:{' '}
-                  <b>
-                    {promo.promotion_type === 'PERCENTAGE'
-                      ? 'Porcentaje (%)'
-                      : 'Monto fijo (S/.)'}
-                  </b>
-                </p>
-                <p className="text-sm text-gray-500">
-                  Valor: <b>{promo.discountValue}</b>
-                </p>
-                <p className="text-sm text-gray-500">
-                  Inicio:{' '}
-                  <b>
-                    {new Date(promo.startDate).toLocaleDateString('es-PE', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric',
-                    })}
-                  </b>
-                </p>
-                <p className="text-sm text-gray-500">
-                  Fin:{' '}
-                  <b>
-                    {new Date(promo.endDate).toLocaleDateString('es-PE', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric',
-                    })}
-                  </b>
-                </p>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="success" onClick={handleSave}>
+                      💾 Guardar
+                    </Button>
+                    <Button variant="ghost" onClick={handleCancel}>
+                      ✖️ Cancelar
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg font-bold text-violet-600 mb-1">
+                    {promo.name}
+                  </h3>
+                  <p className="text-gray-600 mb-2">{promo.description}</p>
+                  <p className="text-sm text-gray-500">
+                    Código: <b>{promo.code}</b>
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Tipo:{' '}
+                    <b>
+                      {promo.promotion_type === 'PERCENTAGE'
+                        ? 'Porcentaje (%)'
+                        : 'Monto fijo (S/.)'}
+                    </b>
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Valor: <b>{promo.discountValue}</b>
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Inicio:{' '}
+                    <b>
+                      {promo.startDate
+                        ? new Date(promo.startDate).toLocaleDateString('es-PE', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                          })
+                        : '—'}
+                    </b>
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Fin:{' '}
+                    <b>
+                      {promo.endDate
+                        ? new Date(promo.endDate).toLocaleDateString('es-PE', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                          })
+                        : '—'}
+                    </b>
+                  </p>
 
-                <div className="flex justify-end mt-4 gap-2">
-                  <Button variant="outline" onClick={() => handleEditClick(promo)}>
-                    ✏️ Editar
-                  </Button>
-                  <Button variant="destructive" onClick={() => handleDelete(promo.id)}>
-                    🗑️ Eliminar
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* === BOTONES DE ACCIÓN (siempre visibles al tener un evento seleccionado) === */}
-      {selectedEvent && (
-        <div className="mt-8 flex gap-4">
-          <Button
-            onClick={() => fetchPromotions(selectedEvent.id)}
-            variant="secondary"
-            size="md"
-          >
-            🔄 Recargar promociones
-          </Button>
-
-          <Button onClick={handleAddPromotion} variant="success" size="md">
-            ➕ Nueva promoción
-          </Button>
+                  <div className="flex justify-end mt-4 gap-2">
+                    <Button variant="outline" onClick={() => handleEditClick(promo)}>
+                      ✏️ Editar
+                    </Button>
+                    <Button variant="destructive" onClick={() => handleDelete(promo.id)}>
+                      🗑️ Eliminar
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
         </div>
       )}
+
+      {/* === BOTONES DE ACCIÓN (SIEMPRE VISIBLES CON EVENTO) === */}
+      <div className="mt-8 flex gap-4">
+        <Button
+          onClick={() => fetchPromotions(selectedEvent.id)}
+          variant="secondary"
+          size="md"
+        >
+          🔄 Recargar promociones
+        </Button>
+
+        <Button onClick={handleAddPromotion} variant="success" size="md">
+          ➕ Nueva promoción
+        </Button>
+      </div>
     </div>
   )
 }
+
