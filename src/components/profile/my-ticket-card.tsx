@@ -1,16 +1,16 @@
 'use client'
 
 import React, { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import type { MyTicket } from '@/lib/types'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { formatDate } from '@/lib/utils'
-import { Calendar, MapPin, Tag, Percent, X } from 'lucide-react'
+import { Calendar, MapPin, Tag, Percent, X, Eye } from 'lucide-react'
 import { SellTicketModal } from '@/components/marketplace/sell-ticket-modal'
 import { MarketplaceService } from '@/services/api/marketplace'
 import { toast } from 'react-hot-toast'
+import Link from 'next/link'
 
 interface MyTicketCardProps {
   ticket: MyTicket
@@ -18,7 +18,6 @@ interface MyTicketCardProps {
 }
 
 export function MyTicketCard({ ticket, onTicketListed }: MyTicketCardProps) {
-  const router = useRouter()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDelisting, setIsDelisting] = useState(false)
 
@@ -26,8 +25,6 @@ export function MyTicketCard({ ticket, onTicketListed }: MyTicketCardProps) {
   const canBeSold = ticket.status === 'ACTIVE' && !ticket.isListed;
   const canBeDelisted = ticket.isListed; // Si está listado, se puede retirar
   const isSold = ticket.status === 'TRANSFERRED';
-
-
 
   const handleDelistTicket = async () => {
     if (!ticket.listingId) {
@@ -74,15 +71,17 @@ export function MyTicketCard({ ticket, onTicketListed }: MyTicketCardProps) {
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-2">
-          {/* Botón para ver detalles del ticket */}
-          <Button 
-            variant="outline" 
-            className="w-full"
-            onClick={() => router.push(`/panel/my-tickets/${ticket.id}`)}
-          >
-            Ver Detalles
-          </Button>
+          {/* Botón Ver más - Siempre visible para tickets ACTIVE o Listados */}
+          {(canBeSold || canBeDelisted) && (
+            <Link href={`/panel/my-tickets/${ticket.id}`} className="w-full">
+              <Button variant="outline" className="w-full">
+                <Eye className="w-4 h-4 mr-2" />
+                Ver más
+              </Button>
+            </Link>
+          )}
           
+          {/* Botón Vender - Solo si está ACTIVE y no listado */}
           {canBeSold && (
             <Button 
               variant="primary" 
@@ -93,6 +92,8 @@ export function MyTicketCard({ ticket, onTicketListed }: MyTicketCardProps) {
               Vender en Marketplace
             </Button>
           )}
+          
+          {/* Botón Retirar - Solo si está listado */}
           {canBeDelisted && (
             <Button 
               variant="outline" 
@@ -102,6 +103,21 @@ export function MyTicketCard({ ticket, onTicketListed }: MyTicketCardProps) {
             >
               <X className="w-4 h-4 mr-2" />
               {isDelisting ? 'Retirando...' : 'Retirar del Marketplace'}
+            </Button>
+          )}
+          
+          {/* Mensaje de vendido - Solo si fue transferido */}
+          {isSold && (
+            <div className="w-full text-center py-3 px-4 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-sm font-medium text-gray-700">✓ Entrada Vendida</p>
+              <p className="text-xs text-gray-500 mt-1">Esta entrada fue transferida al comprador</p>
+            </div>
+          )}
+          
+          {/* Fallback para otros estados */}
+          {!canBeSold && !canBeDelisted && !isSold && (
+            <Button variant="ghost" className="w-full" disabled>
+              No disponible
             </Button>
           )}
         </CardFooter>

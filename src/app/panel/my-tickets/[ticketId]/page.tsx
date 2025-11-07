@@ -71,6 +71,52 @@ export default function TicketDetailPage() {
     )
   }
 
+  // Si el ticket fue vendido/transferido, mostrar mensaje especial
+  if (ticket.status === 'TRANSFERRED') {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <Container>
+          <Button
+            variant="ghost"
+            onClick={() => router.push('/panel/my-tickets')}
+            className="mb-6"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Volver a Mis Tickets
+          </Button>
+
+          <Card className="max-w-2xl mx-auto">
+            <CardContent className="py-12 text-center">
+              <div className="mb-6">
+                <div className="w-20 h-20 mx-auto bg-green-100 rounded-full flex items-center justify-center">
+                  <span className="text-4xl">🎉</span>
+                </div>
+              </div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-4">
+                {ticket.event.title}
+              </h1>
+              <div className="inline-block px-6 py-3 bg-gray-100 rounded-lg mb-6">
+                <p className="text-lg font-semibold text-gray-700">
+                  💸 Ticket Vendido
+                </p>
+              </div>
+              <p className="text-gray-600 max-w-md mx-auto mb-8">
+                Este ticket fue vendido exitosamente en el marketplace. 
+                Ya no tienes acceso a los detalles ni al código QR.
+              </p>
+              <Button 
+                variant="primary"
+                onClick={() => router.push('/panel/my-tickets')}
+              >
+                Ver Mis Otros Tickets
+              </Button>
+            </CardContent>
+          </Card>
+        </Container>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <Container>
