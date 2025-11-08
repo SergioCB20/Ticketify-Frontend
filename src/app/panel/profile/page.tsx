@@ -85,28 +85,48 @@ export default function ProfilePage() {
     }))
   }
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('La imagen no debe superar los 5MB')
-        return
-      }
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0]
+  if (!file) return
 
-      if (!file.type.startsWith('image/')) {
-        toast.error('Solo se permiten imágenes')
-        return
-      }
-
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setPreviewImage(reader.result as string)
-      }
-      reader.readAsDataURL(file)
-      toast.success('Imagen cargada (pendiente de guardar)')
-    }
+  if (!file.type.startsWith('image/')) {
+    toast.error('Solo se permiten imágenes')
+    return
   }
 
+  // Crear un canvas para redimensionar/comprimir
+  const img = new Image()
+  img.src = URL.createObjectURL(file)
+  img.onload = () => {
+    const canvas = document.createElement('canvas')
+    const maxSize = 256 // ancho y alto máximo
+    let width = img.width
+    let height = img.height
+
+    if (width > height) {
+      if (width > maxSize) {
+        height = Math.round((height * maxSize) / width)
+        width = maxSize
+      }
+    } else {
+      if (height > maxSize) {
+        width = Math.round((width * maxSize) / height)
+        height = maxSize
+      }
+    }
+
+    canvas.width = width
+    canvas.height = height
+
+    const ctx = canvas.getContext('2d')
+    ctx?.drawImage(img, 0, 0, width, height)
+
+    // Convertir a base64 con calidad reducida y formato WebP
+    const compressedBase64 = canvas.toDataURL('image/webp', 0.6) // calidad 60%
+    setPreviewImage(compressedBase64)
+    toast.success('Imagen comprimida lista (pendiente de guardar)')
+  }
+}
   const handleSaveProfile = async () => {
     // Validaciones
     if (!formData.firstName.trim() || formData.firstName.length < 2) {
