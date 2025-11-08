@@ -1,10 +1,11 @@
 import api, { handleApiError } from '../../lib/api'
 import { StorageService } from '../storage'
-import type { 
-  AuthResponse, 
-  LoginCredentials, 
-  RegisterData, 
-  User 
+import type {
+  AuthResponse,
+  LoginCredentials,
+  RegisterData,
+  User,
+  GoogleLoginData
 } from '../../lib/types'
 
 export class AuthService {
@@ -14,14 +15,36 @@ export class AuthService {
       console.log('Logging in with credentials:', credentials)
       const response = await api.post<AuthResponse>('/auth/login', credentials)
       const { user, accessToken, refreshToken } = response.data
-      
+
       // Guardar tokens y usuario en localStorage
       StorageService.setAccessToken(accessToken)
       StorageService.setRefreshToken(refreshToken)
       StorageService.setUser(user)
-      
+
       return response.data
     } catch (error) {
+      throw handleApiError(error)
+    }
+  }
+
+  // Login con Google
+  static async loginWithGoogle(googleData: GoogleLoginData): Promise<AuthResponse> {
+    try {
+      console.log('Logging in with Google:', googleData)
+      const response = await api.post<AuthResponse>('/auth/google/login', googleData)
+      console.log('Google login response:', response.data)
+
+      const { user, accessToken, refreshToken } = response.data
+
+      // Guardar tokens y usuario en localStorage
+      StorageService.setAccessToken(accessToken)
+      StorageService.setRefreshToken(refreshToken)
+      StorageService.setUser(user)
+
+      console.log('Tokens saved to localStorage')
+      return response.data
+    } catch (error) {
+      console.error('Google login error:', error)
       throw handleApiError(error)
     }
   }
@@ -32,12 +55,12 @@ export class AuthService {
       console.log('Registering user with data:', userData)
       const response = await api.post<AuthResponse>('/auth/register', userData)
       const { user, accessToken, refreshToken } = response.data
-      
+
       // Guardar tokens y usuario en localStorage
       StorageService.setAccessToken(accessToken)
       StorageService.setRefreshToken(refreshToken)
       StorageService.setUser(user)
-      
+
       console.log('Register response:', response.data)
       return response.data
     } catch (error) {
@@ -63,13 +86,13 @@ export class AuthService {
       const response = await api.post<AuthResponse>('/auth/refresh', {
         refreshToken
       })
-      
+
       // Actualizar tokens
       StorageService.setAccessToken(response.data.accessToken)
       if (response.data.refreshToken) {
         StorageService.setRefreshToken(response.data.refreshToken)
       }
-      
+
       return response.data
     } catch (error) {
       throw handleApiError(error)
@@ -119,7 +142,7 @@ export class AuthService {
 
   // Cambiar contraseña
   static async changePassword(
-    currentPassword: string, 
+    currentPassword: string,
     newPassword: string
   ): Promise<void> {
     try {
@@ -134,47 +157,6 @@ export class AuthService {
 
   // Actualizar perfil
   static async updateProfile(userData: Partial<User>): Promise<User> {
-    try {
-      const response = await api.put<User>('/auth/profile', userData)
-      // Actualizar usuario en localStorage
-      StorageService.setUser(response.data)
-      return response.data
-    } catch (error) {
-      throw handleApiError(error)
-    }
-  }
-
-  // Subir foto de perfil (opción 1: archivo)
-  static async uploadPhoto(file: File): Promise<{ photoUrl: string; message: string }> {
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-      
-      const response = await api.post<{ photoUrl: string; message: string }>(
-        '/auth/upload-photo',
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      )
-      
-      // Actualizar usuario en localStorage con la nueva foto
-      const currentUser = StorageService.getUser<User>()
-      if (currentUser) {
-        currentUser.profilePhoto = response.data.photoUrl
-        StorageService.setUser(currentUser)
-      }
-      
-      return response.data
-    } catch (error) {
-      throw handleApiError(error)
-    }
-  }
-
-  // Actualizar foto en perfil (opción 2: base64 en PUT)
-  static async updateProfileWithPhoto(userData: Partial<User> & { profilePhoto?: string | null }): Promise<User> {
     try {
       const response = await api.put<User>('/auth/profile', userData)
       // Actualizar usuario en localStorage
