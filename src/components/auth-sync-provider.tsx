@@ -6,7 +6,8 @@ import { StorageService } from '@/services/storage'
 
 /**
  * Componente que sincroniza automáticamente NextAuth con localStorage
- * Debe estar dentro del SessionProvider
+ * Solo sincroniza cuando HAY sesión de NextAuth (OAuth)
+ * NO interfiere con login tradicional
  */
 export default function AuthSyncProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession()
@@ -16,10 +17,10 @@ export default function AuthSyncProvider({ children }: { children: React.ReactNo
       return
     }
 
-    // Si hay sesión activa de NextAuth, sincronizar con localStorage
+    // Solo sincronizar si hay sesión ACTIVA de NextAuth (OAuth login)
     if (status === 'authenticated' && session) {
       try {
-        console.log('AuthSync - Syncing session to localStorage')
+        console.log('AuthSync - NextAuth session detected, syncing to localStorage')
 
         if (session.accessToken) {
           StorageService.setAccessToken(session.accessToken)
@@ -42,25 +43,16 @@ export default function AuthSyncProvider({ children }: { children: React.ReactNo
           })
         }
 
-        console.log('AuthSync - Data synced successfully')
+        console.log('AuthSync - NextAuth data synced to localStorage')
       } catch (error) {
-        console.error('AuthSync - Error accessing localStorage:', error)
-        // Si hay error con localStorage, la app puede seguir funcionando
-        // usando solo la sesión de NextAuth
+        console.error('AuthSync - Error syncing NextAuth to localStorage:', error)
       }
     }
 
-    // Si no hay sesión, limpiar localStorage si es posible
-    if (status === 'unauthenticated') {
-      try {
-        const hasLocalToken = StorageService.getAccessToken()
-        if (!hasLocalToken) {
-          StorageService.clearAll()
-        }
-      } catch (error) {
-        console.error('AuthSync - Error clearing localStorage:', error)
-      }
-    }
+    // IMPORTANTE: NO limpiar localStorage cuando status === 'unauthenticated'
+    // porque puede haber un login tradicional activo
+    // Solo NextAuth no tiene sesión, pero localStorage puede tener datos válidos
+    
   }, [session, status])
 
   return <>{children}</>

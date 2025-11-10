@@ -12,7 +12,8 @@ const isLocalStorageAvailable = (): boolean => {
     localStorage.setItem(test, test)
     localStorage.removeItem(test)
     return true
-  } catch {
+  } catch (error) {
+    console.error('⚠️ localStorage not available:', error)
     return false
   }
 }
@@ -22,9 +23,10 @@ export class StorageService {
     try {
       if (isLocalStorageAvailable()) {
         localStorage.setItem(TOKEN_KEY, token)
+        console.log('✅ StorageService - Access token saved')
       }
     } catch (error) {
-      console.error('Error setting access token:', error)
+      console.error('❌ Error setting access token:', error)
     }
   }
 
@@ -34,7 +36,7 @@ export class StorageService {
         return localStorage.getItem(TOKEN_KEY)
       }
     } catch (error) {
-      console.error('Error getting access token:', error)
+      console.error('❌ Error getting access token:', error)
     }
     return null
   }
@@ -43,9 +45,10 @@ export class StorageService {
     try {
       if (isLocalStorageAvailable()) {
         localStorage.setItem(REFRESH_TOKEN_KEY, token)
+        console.log('✅ StorageService - Refresh token saved')
       }
     } catch (error) {
-      console.error('Error setting refresh token:', error)
+      console.error('❌ Error setting refresh token:', error)
     }
   }
 
@@ -55,7 +58,7 @@ export class StorageService {
         return localStorage.getItem(REFRESH_TOKEN_KEY)
       }
     } catch (error) {
-      console.error('Error getting refresh token:', error)
+      console.error('❌ Error getting refresh token:', error)
     }
     return null
   }
@@ -65,32 +68,46 @@ export class StorageService {
       if (isLocalStorageAvailable()) {
         localStorage.removeItem(TOKEN_KEY)
         localStorage.removeItem(REFRESH_TOKEN_KEY)
+        console.log('✅ StorageService - Tokens removed')
       }
     } catch (error) {
-      console.error('Error removing tokens:', error)
+      console.error('❌ Error removing tokens:', error)
     }
   }
 
   static setUser(user: any): void {
     try {
       if (isLocalStorageAvailable()) {
-        localStorage.setItem(USER_KEY, JSON.stringify(user))
+        const userString = JSON.stringify(user)
+        localStorage.setItem(USER_KEY, userString)
+        console.log('✅ StorageService - User saved:', {
+          id: user.id,
+          email: user.email,
+          roles: user.roles
+        })
       }
     } catch (error) {
-      console.error('Error setting user:', error)
+      console.error('❌ Error setting user:', error)
     }
   }
 
   static getUser<T>(): T | null {
     try {
       if (isLocalStorageAvailable()) {
-        const user = localStorage.getItem(USER_KEY)
-        if (!user) return null
-        const parsed = JSON.parse(user)
-        return parsed.user || parsed
+        const userString = localStorage.getItem(USER_KEY)
+        
+        if (!userString) {
+          console.log('⚠️ StorageService - No user data in localStorage')
+          return null
+        }
+        
+        const parsed = JSON.parse(userString)
+        const user = parsed.user || parsed
+        
+        return user
       }
     } catch (error) {
-      console.error('Error getting user:', error)
+      console.error('❌ Error getting user:', error)
     }
     return null
   }
@@ -99,13 +116,15 @@ export class StorageService {
     try {
       if (isLocalStorageAvailable()) {
         localStorage.removeItem(USER_KEY)
+        console.log('✅ StorageService - User removed')
       }
     } catch (error) {
-      console.error('Error removing user:', error)
+      console.error('❌ Error removing user:', error)
     }
   }
 
   static clearAll(): void {
+    console.log('🗑️ StorageService - Clearing all data')
     this.removeTokens()
     this.removeUser()
   }
