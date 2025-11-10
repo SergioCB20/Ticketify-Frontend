@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { Container } from '@/components/ui/container'
 import { useRouter } from 'next/navigation'
-import type { MyTicket } from '@/lib/types'
+import type { Ticket } from '@/lib/types'
 import { TicketsService } from '@/services/api/tickets'
 import { MyTicketCard } from '@/components/profile/my-ticket-card'
 // 2. Quitar 'Ticket' (no usado)
@@ -19,9 +19,9 @@ import { Home } from 'lucide-react'
 
 export default function MyTicketsPage() {
   // 4. Quitar 'user' de useAuth si no se usa directamente (authLoading sí se usa)
-  const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const { isAuthenticated, loading: authLoading } = useAuth()
   const router = useRouter() // router tampoco se usa, pero puede quedar por si se añade la redirección
-  const [tickets, setTickets] = useState<MyTicket[]>([])
+  const [tickets, setTickets] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'past'>('all')
