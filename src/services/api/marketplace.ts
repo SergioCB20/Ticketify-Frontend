@@ -61,4 +61,16 @@ export class MarketplaceService {
       throw handleApiError(error);
     }
   }
+
+  /**
+   * Cancelar/retirar un listing del marketplace
+   */
+  static async cancelListing(listingId: string): Promise<void> {
+    try {
+      // Llama a DELETE /api/marketplace/listings/{listing_id}
+      await api.delete(`${BASE_URL}/listings/${listingId}`);
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
 }

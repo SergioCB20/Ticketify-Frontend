@@ -12,6 +12,7 @@ export class TicketsService {
   static async getMyTickets(): Promise<MyTicket[]> {
     try {
       const response = await api.get<MyTicket[]>(`${BASE_URL}/my-tickets`);
+      console.log('📦 Response from /my-tickets:', response.data);
       return response.data;
     } catch (error) {
       throw handleApiError(error);
