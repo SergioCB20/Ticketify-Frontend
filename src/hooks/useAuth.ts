@@ -1,3 +1,4 @@
+"use client";
 import { useState, useEffect } from 'react'
 import { AuthService } from '../services/api/auth'
 import type { User, LoginCredentials, RegisterData } from '../lib/types'
