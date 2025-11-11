@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { EventService } from '@/services/api/events'
+import { PromotionService } from '@/services/api/promotions'
 import { Button } from '@/components/ui/button'
 import { Container } from '@/components/ui/container'
 import { toast } from 'react-hot-toast'
@@ -13,7 +14,10 @@ export default function EventDetailPage() {
   const [event, setEvent] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [selectedTickets, setSelectedTickets] = useState<Record<string, number>>({})
+  const [promoCode, setPromoCode] = useState('')
+  const [appliedPromo, setAppliedPromo] = useState<any>(null)
 
+  // 🔹 Cargar evento
   useEffect(() => {
     const fetchEvent = async () => {
       try {
@@ -45,6 +49,37 @@ export default function EventDetailPage() {
     )
   }
 
+  // 🔹 Aplicar código promocional
+  const handleApplyPromo = async () => {
+    if (!promoCode.trim()) {
+      toast.error('Ingresa un código promocional')
+      return
+    }
+
+    try {
+      const promo = await PromotionService.validate(promoCode.trim(), event.id)
+      setAppliedPromo(promo)
+      toast.success(`Código ${promo.code} aplicado correctamente 🎉`)
+    } catch (error: any) {
+      setAppliedPromo(null)
+      toast.error(error.message || 'Código inválido o expirado')
+    }
+  }
+
+  // 🔹 Calcular precio con descuento
+  const getDiscountedPrice = (basePrice: number) => {
+    if (!appliedPromo) return basePrice
+    if (appliedPromo.promotion_type === 'PERCENTAGE') {
+      const discountAmount = (basePrice * appliedPromo.discount_value) / 100
+      return Math.max(basePrice - discountAmount, 0)
+    }
+    if (appliedPromo.promotion_type === 'FIXED_AMOUNT') {
+      return Math.max(basePrice - appliedPromo.discount_value, 0)
+    }
+    return basePrice
+  }
+
+  // 🔹 Controlar selección
   const handleSelect = (ticketId: string, delta: number) => {
     setSelectedTickets(prev => {
       const current = prev[ticketId] || 0
@@ -53,10 +88,13 @@ export default function EventDetailPage() {
     })
   }
 
-  const total = event.ticket_types?.reduce((acc: number, t: any) => {
-    const qty = selectedTickets[t.id] || 0
-    return acc + qty * t.price
-  }, 0) || 0
+  // 🔹 Calcular total con descuento
+  const total =
+    event.ticket_types?.reduce((acc: number, t: any) => {
+      const qty = selectedTickets[t.id] || 0
+      const price = getDiscountedPrice(t.price)
+      return acc + qty * price
+    }, 0) || 0
 
   const hasSelection = Object.values(selectedTickets).some(qty => qty > 0)
 
@@ -116,7 +154,8 @@ export default function EventDetailPage() {
           <div className="space-y-4">
             {event.ticket_types?.map((ticket: any) => {
               const qty = selectedTickets[ticket.id] || 0
-              const soldOut = ticket.stock <= 0
+              const soldOut = ticket.remaining_quantity <= 0
+              const discountedPrice = getDiscountedPrice(ticket.price)
               return (
                 <div
                   key={ticket.id}
@@ -127,8 +166,17 @@ export default function EventDetailPage() {
                   <div>
                     <h3 className="font-bold text-gray-800">{ticket.name}</h3>
                     <p className="text-sm text-gray-500">
-                      S/ {ticket.price.toFixed(2)} — {ticket.stock} disponibles
+                      S/ {discountedPrice.toFixed(2)} — {ticket.remaining_quantity} disponibles
                     </p>
+                    {appliedPromo && (
+                      <p className="text-xs text-green-600 mt-1">
+                        Descuento aplicado (
+                        {appliedPromo.promotion_type === 'PERCENTAGE'
+                          ? `-${appliedPromo.discount_value}%`
+                          : `-S/ ${appliedPromo.discount_value}`}
+                        )
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-3">
@@ -145,7 +193,7 @@ export default function EventDetailPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => handleSelect(ticket.id, +1)}
-                      disabled={qty >= ticket.stock || soldOut}
+                      disabled={qty >= ticket.remaining_quantity || soldOut}
                     >
                       +
                     </Button>
@@ -153,6 +201,20 @@ export default function EventDetailPage() {
                 </div>
               )
             })}
+          </div>
+
+          {/* 💳 Código promocional */}
+          <div className="flex gap-3 mt-8">
+            <input
+              type="text"
+              placeholder="Código promocional"
+              value={promoCode}
+              onChange={(e) => setPromoCode(e.target.value)}
+              className="border rounded-lg px-4 py-2 flex-grow"
+            />
+            <Button variant="outline" onClick={handleApplyPromo}>
+              Aplicar
+            </Button>
           </div>
 
           {/* 💰 Total + comprar */}
