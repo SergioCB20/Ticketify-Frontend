@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { EventCard } from '@/components/events/event-card'
 import { Container } from '@/components/ui/container'
+import { Navbar } from '@/components/layout/navbar'
 
 interface Event {
   id: string
@@ -26,7 +27,7 @@ interface Event {
   status: string
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
 export default function EventsPage() {
   const searchParams = useSearchParams()
@@ -64,10 +65,12 @@ export default function EventsPage() {
         const venue = searchParams.get('venue')
         if (venue) params.set('venue', venue)
 
+        console.log('Search parameters:', params.toString())
+
         // Decidir qué endpoint usar
         const endpoint = params.toString() 
-          ? `${API_URL}/api/events/search?${params.toString()}`
-          : `${API_URL}/api/events`
+          ? `${API_URL}/events/search?${params.toString()}`
+          : `${API_URL}/events/`
 
         console.log('Fetching from:', endpoint)
         const response = await fetch(endpoint)
@@ -114,6 +117,7 @@ export default function EventsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Navbar showSearch={true} />
       <Container className="py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">

@@ -1,5 +1,6 @@
 import api, { handleApiError } from '@/lib/api';
 import type { PaginatedListings } from '@/lib/types';
+import type { PaginatedListings, MarketplaceListing, CreateListingData } from '@/lib/types';
 
 // Asumimos que el backend tendrá un endpoint en /api/marketplace
 const BASE_URL = '/marketplace'; 
@@ -26,6 +27,7 @@ export class MarketplaceService {
       throw handleApiError(error);
     }
   }
+  
 
   /**
    * Obtener el detalle de un listado específico
@@ -35,6 +37,38 @@ export class MarketplaceService {
       // NOTA: Tendrás que crear este endpoint en tu backend
       const response = await api.get(`${BASE_URL}/listings/${listingId}`);
       return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  static async createListing(data: CreateListingData): Promise<MarketplaceListing> {
+    try {
+      // Llama a POST /api/marketplace/listings
+      const response = await api.post<MarketplaceListing>(`${BASE_URL}/listings`, data);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  static async buyListing(listingId: string): Promise<{success: boolean, newTicketId: string}> {
+    try {
+      // Llama a POST /api/marketplace/listings/{listing_id}/buy
+      const response = await api.post(`${BASE_URL}/listings/${listingId}/buy`);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  /**
+   * Cancelar/retirar un listing del marketplace
+   */
+  static async cancelListing(listingId: string): Promise<void> {
+    try {
+      // Llama a DELETE /api/marketplace/listings/{listing_id}
+      await api.delete(`${BASE_URL}/listings/${listingId}`);
     } catch (error) {
       throw handleApiError(error);
     }

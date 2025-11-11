@@ -1,27 +1,80 @@
 import api, { handleApiError } from '../../lib/api'
 import { StorageService } from '../storage'
-import type { 
-  AuthResponse, 
-  LoginCredentials, 
-  RegisterData, 
-  User 
+import type {
+  AuthResponse,
+  LoginCredentials,
+  RegisterData,
+  User,
+  GoogleLoginData
 } from '../../lib/types'
 
 export class AuthService {
   // Login
   static async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      console.log('Logging in with credentials:', credentials)
+      console.log('🔐 AuthService.login - Starting login with:', credentials.email)
       const response = await api.post<AuthResponse>('/auth/login', credentials)
-      const { user, accessToken, refreshToken } = response.data
       
+      console.log('📦 AuthService.login - Backend response:', response.data)
+      console.log('👤 AuthService.login - User data:', response.data.user)
+      console.log('🎫 AuthService.login - Access token:', response.data.accessToken ? 'Present' : 'Missing')
+      console.log('🔄 AuthService.login - Refresh token:', response.data.refreshToken ? 'Present' : 'Missing')
+      
+      const { user, accessToken, refreshToken } = response.data
+
+      if (!user) {
+        console.error('❌ AuthService.login - No user in response!')
+        throw new Error('No user data received from server')
+      }
+
+      if (!accessToken) {
+        console.error('❌ AuthService.login - No access token in response!')
+        throw new Error('No access token received from server')
+      }
+
+      // Guardar tokens y usuario en localStorage
+      console.log('💾 AuthService.login - Saving to localStorage...')
+      StorageService.setAccessToken(accessToken)
+      StorageService.setRefreshToken(refreshToken)
+      StorageService.setUser(user)
+
+      // Verificar que se guardó
+      const savedToken = StorageService.getAccessToken()
+      const savedUser = StorageService.getUser<User>()
+      console.log('✅ AuthService.login - Verification:')
+      console.log('  - Token saved:', savedToken ? 'Yes' : 'No')
+      console.log('  - User saved:', savedUser ? 'Yes' : 'No')
+      if (savedUser) {
+        console.log('  - User ID:', savedUser.id)
+        console.log('  - User email:', savedUser.email)
+        console.log('  - User roles:', savedUser.roles)
+      }
+
+      return response.data
+    } catch (error) {
+      console.error('❌ AuthService.login - Error:', error)
+      throw handleApiError(error)
+    }
+  }
+
+  // Login con Google
+  static async loginWithGoogle(googleData: GoogleLoginData): Promise<AuthResponse> {
+    try {
+      console.log('🔐 AuthService.loginWithGoogle - Starting with:', googleData)
+      const response = await api.post<AuthResponse>('/auth/google/login', googleData)
+      console.log('📦 AuthService.loginWithGoogle - Backend response:', response.data)
+
+      const { user, accessToken, refreshToken } = response.data
+
       // Guardar tokens y usuario en localStorage
       StorageService.setAccessToken(accessToken)
       StorageService.setRefreshToken(refreshToken)
       StorageService.setUser(user)
-      
+
+      console.log('✅ AuthService.loginWithGoogle - Tokens saved to localStorage')
       return response.data
     } catch (error) {
+      console.error('❌ AuthService.loginWithGoogle - Error:', error)
       throw handleApiError(error)
     }
   }
@@ -29,16 +82,16 @@ export class AuthService {
   // Registro
   static async register(userData: RegisterData): Promise<AuthResponse> {
     try {
-      console.log('Registering user with data:', userData)
+      console.log('📝 AuthService.register - Registering user:', userData.email)
       const response = await api.post<AuthResponse>('/auth/register', userData)
       const { user, accessToken, refreshToken } = response.data
-      
+
       // Guardar tokens y usuario en localStorage
       StorageService.setAccessToken(accessToken)
       StorageService.setRefreshToken(refreshToken)
       StorageService.setUser(user)
-      
-      console.log('Register response:', response.data)
+
+      console.log('✅ AuthService.register - User registered and saved')
       return response.data
     } catch (error) {
       throw handleApiError(error)
@@ -63,13 +116,13 @@ export class AuthService {
       const response = await api.post<AuthResponse>('/auth/refresh', {
         refreshToken
       })
-      
+
       // Actualizar tokens
       StorageService.setAccessToken(response.data.accessToken)
       if (response.data.refreshToken) {
         StorageService.setRefreshToken(response.data.refreshToken)
       }
-      
+
       return response.data
     } catch (error) {
       throw handleApiError(error)
@@ -91,12 +144,16 @@ export class AuthService {
 
   // Verificar si el usuario está autenticado
   static isAuthenticated(): boolean {
-    return !!StorageService.getAccessToken()
+    const hasToken = !!StorageService.getAccessToken()
+    console.log('🔍 AuthService.isAuthenticated:', hasToken)
+    return hasToken
   }
 
   // Obtener usuario actual del storage
   static getCurrentUser(): User | null {
-    return StorageService.getUser<User>()
+    const user = StorageService.getUser<User>()
+    console.log('👤 AuthService.getCurrentUser:', user ? `User ID: ${user.id}` : 'null')
+    return user
   }
 
   // Solicitar reset de contraseña
@@ -119,7 +176,7 @@ export class AuthService {
 
   // Cambiar contraseña
   static async changePassword(
-    currentPassword: string, 
+    currentPassword: string,
     newPassword: string
   ): Promise<void> {
     try {
