@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Upload, Repeat, AlertCircle, CheckCircle } from 'lucide-react'
+import { Upload, Repeat, AlertCircle, CheckCircle, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '@/components/layout/navbar'
 import { Footer } from '@/components/layout/footer'
@@ -16,6 +16,7 @@ import { getCategories, type Category } from '@/services/api/categories'
 import { TicketTypeService } from '@/services/api/ticketTypes'
 import { TicketTypeManager } from '@/components/events/ticket-type-manager'
 import type { TicketTypeFormData, TicketTypeCreate } from '@/lib/types'
+import { uploadImage, uploadVideo, getFileUrl } from '@/services/api/upload'
 
 // Componente Textarea personalizado (basado en Input)
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -77,6 +78,10 @@ export default function CrearEventoPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [loadingCategories, setLoadingCategories] = useState(true)
   const [ticketTypes, setTicketTypes] = useState<TicketTypeFormData[]>([])
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [uploadingVideo, setUploadingVideo] = useState(false)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [videoPreview, setVideoPreview] = useState<string | null>(null)
   
   const [formData, setFormData] = useState({
     nombre: '',
@@ -145,9 +150,23 @@ export default function CrearEventoPage() {
         setErrors(prev => ({ ...prev, imagen: 'La imagen no debe superar los 5MB' }))
         return
       }
+      
+      // Create preview
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+      
       setFormData(prev => ({ ...prev, imagen: file }))
       setErrors(prev => ({ ...prev, imagen: '' }))
     }
+  }
+
+  const handleRemoveImage = () => {
+    setFormData(prev => ({ ...prev, imagen: null }))
+    setImagePreview(null)
+    setErrors(prev => ({ ...prev, imagen: '' }))
   }
 
   const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -158,9 +177,23 @@ export default function CrearEventoPage() {
         setErrors(prev => ({ ...prev, video: 'El video no debe superar los 50MB' }))
         return
       }
+      
+      // Create preview
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setVideoPreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+      
       setFormData(prev => ({ ...prev, video: file }))
       setErrors(prev => ({ ...prev, video: '' }))
     }
+  }
+
+  const handleRemoveVideo = () => {
+    setFormData(prev => ({ ...prev, video: null }))
+    setVideoPreview(null)
+    setErrors(prev => ({ ...prev, video: '' }))
   }
 
   // Convert date parts to ISO string
@@ -246,9 +279,42 @@ export default function CrearEventoPage() {
     setLoading(true)
 
     try {
-      // TODO: Upload multimedia files first and get URLs
-      // For now, we'll use empty arrays
+      // Upload multimedia files first and get URLs
       const multimediaUrls: string[] = []
+      
+      // Upload image if exists
+      if (formData.imagen) {
+        try {
+          setUploadingImage(true)
+          const imageResponse = await uploadImage(formData.imagen)
+          multimediaUrls.push(imageResponse.url)
+        } catch (err: any) {
+          console.error('Error uploading image:', err)
+          setError('Error al subir la imagen. ' + (err.message || 'Intenta de nuevo.'))
+          setLoading(false)
+          setUploadingImage(false)
+          return
+        } finally {
+          setUploadingImage(false)
+        }
+      }
+      
+      // Upload video if exists
+      if (formData.video) {
+        try {
+          setUploadingVideo(true)
+          const videoResponse = await uploadVideo(formData.video)
+          multimediaUrls.push(videoResponse.url)
+        } catch (err: any) {
+          console.error('Error uploading video:', err)
+          setError('Error al subir el video. ' + (err.message || 'Intenta de nuevo.'))
+          setLoading(false)
+          setUploadingVideo(false)
+          return
+        } finally {
+          setUploadingVideo(false)
+        }
+      }
 
       // Prepare event data
       const eventData: EventCreateData = {
@@ -443,36 +509,74 @@ export default function CrearEventoPage() {
                   {/* Imagen */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-800 mb-2">
-                      Image <span className="text-red-500">*</span>{' '}
-                      <span className="text-gray-500 font-normal">( 836px x 522px )</span>
+                      Imagen <span className="text-red-500">*</span>{' '}
+                      <span className="text-gray-500 font-normal">( Recomendado: 836px x 522px )</span>
                     </label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-16 text-center hover:border-primary-500 hover:bg-primary-50 transition-all cursor-pointer bg-gray-50">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                        id="image-upload"
-                      />
-                      <label htmlFor="image-upload" className="cursor-pointer block">
-                        <div className="text-7xl text-gray-300 mb-4 font-bold">T</div>
-                        <div className="flex items-center justify-center space-x-2 text-primary-600 font-medium">
-                          <Upload size={20} />
-                          <span>Cargar Imagen</span>
+                    {imagePreview ? (
+                      <div className="relative border-2 border-gray-300 rounded-lg overflow-hidden">
+                        <img 
+                          src={imagePreview} 
+                          alt="Vista previa" 
+                          className="w-full h-64 object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleRemoveImage}
+                          className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-colors"
+                          title="Eliminar imagen"
+                        >
+                          <X size={20} />
+                        </button>
+                        <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="hidden"
+                            id="image-upload"
+                            disabled={uploadingImage}
+                          />
+                          <label htmlFor="image-upload" className="cursor-pointer">
+                            <Button variant="primary" size="sm" type="button">
+                              <Upload size={16} className="mr-2" />
+                              Cambiar Imagen
+                            </Button>
+                          </label>
                         </div>
                         {formData.imagen && (
-                          <p className="mt-3 text-sm text-gray-600 font-medium">
+                          <div className="absolute bottom-2 left-2 bg-white px-3 py-1 rounded-full text-xs font-medium text-gray-700 shadow">
                             ✓ {formData.imagen.name}
-                          </p>
+                          </div>
                         )}
-                      </label>
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-16 text-center hover:border-primary-500 hover:bg-primary-50 transition-all cursor-pointer bg-gray-50">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                          id="image-upload"
+                          disabled={uploadingImage}
+                        />
+                        <label htmlFor="image-upload" className="cursor-pointer block">
+                          <div className="text-7xl text-gray-300 mb-4 font-bold">📷</div>
+                          <div className="flex items-center justify-center space-x-2 text-primary-600 font-medium">
+                            <Upload size={20} />
+                            <span>Cargar Imagen</span>
+                          </div>
+                          <p className="mt-2 text-xs text-gray-500">JPG, PNG, GIF o WEBP (Max. 5MB)</p>
+                        </label>
+                      </div>
+                    )}
                     {errors.imagen && (
                       <p className="mt-1 text-sm text-red-600">{errors.imagen}</p>
                     )}
-                    <p className="mt-2 text-xs text-gray-500">
-                      Nota: La funcionalidad de subida de archivos será implementada próximamente
-                    </p>
+                    {uploadingImage && (
+                      <p className="mt-2 text-sm text-primary-600 flex items-center">
+                        <span className="animate-spin mr-2">⏳</span> Subiendo imagen...
+                      </p>
+                    )}
                   </div>
 
                   {/* Video */}
@@ -480,29 +584,70 @@ export default function CrearEventoPage() {
                     <label className="block text-sm font-semibold text-gray-800 mb-2">
                       Video (Opcional)
                     </label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-primary-500 hover:bg-primary-50 transition-all cursor-pointer bg-gray-50">
-                      <input
-                        type="file"
-                        accept="video/*"
-                        onChange={handleVideoUpload}
-                        className="hidden"
-                        id="video-upload"
-                      />
-                      <label htmlFor="video-upload" className="cursor-pointer block">
-                        <div className="text-5xl text-gray-300 mb-3">🎥</div>
-                        <div className="flex items-center justify-center space-x-2 text-primary-600 font-medium">
-                          <Upload size={20} />
-                          <span>Cargar Video</span>
+                    {videoPreview ? (
+                      <div className="relative border-2 border-gray-300 rounded-lg overflow-hidden">
+                        <video 
+                          src={videoPreview} 
+                          className="w-full h-48 object-cover"
+                          controls
+                        />
+                        <div className="absolute top-2 right-2 flex gap-2">
+                          <button
+                            type="button"
+                            onClick={handleRemoveVideo}
+                            className="bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-colors"
+                            title="Eliminar video"
+                          >
+                            <X size={20} />
+                          </button>
+                          <input
+                            type="file"
+                            accept="video/*"
+                            onChange={handleVideoUpload}
+                            className="hidden"
+                            id="video-upload"
+                            disabled={uploadingVideo}
+                          />
+                          <label htmlFor="video-upload" className="cursor-pointer">
+                            <Button variant="primary" size="sm" type="button">
+                              <Upload size={16} className="mr-2" />
+                              Cambiar
+                            </Button>
+                          </label>
                         </div>
                         {formData.video && (
-                          <p className="mt-3 text-sm text-gray-600 font-medium">
+                          <div className="mt-2 px-3 py-1 bg-gray-100 rounded text-xs font-medium text-gray-700 inline-block">
                             ✓ {formData.video.name}
-                          </p>
+                          </div>
                         )}
-                      </label>
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-primary-500 hover:bg-primary-50 transition-all cursor-pointer bg-gray-50">
+                        <input
+                          type="file"
+                          accept="video/*"
+                          onChange={handleVideoUpload}
+                          className="hidden"
+                          id="video-upload"
+                          disabled={uploadingVideo}
+                        />
+                        <label htmlFor="video-upload" className="cursor-pointer block">
+                          <div className="text-5xl text-gray-300 mb-3">🎥</div>
+                          <div className="flex items-center justify-center space-x-2 text-primary-600 font-medium">
+                            <Upload size={20} />
+                            <span>Cargar Video</span>
+                          </div>
+                          <p className="mt-2 text-xs text-gray-500">MP4, AVI, MOV, WMV o WEBM (Max. 50MB)</p>
+                        </label>
+                      </div>
+                    )}
                     {errors.video && (
                       <p className="mt-1 text-sm text-red-600">{errors.video}</p>
+                    )}
+                    {uploadingVideo && (
+                      <p className="mt-2 text-sm text-primary-600 flex items-center">
+                        <span className="animate-spin mr-2">⏳</span> Subiendo video...
+                      </p>
                     )}
                   </div>
                 </div>

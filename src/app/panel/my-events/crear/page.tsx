@@ -1,39 +1,32 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Upload, Repeat, AlertCircle, CheckCircle } from 'lucide-react'
+import { AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { Container } from '@/components/ui/container'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
-import { createEvent} from '@/services/api/events'
-import { Category } from '@/lib/types/event'
+import { TicketTypeManager } from '@/components/events/ticket-type-manager'
+import { createEventWithTicketTypes } from '@/services/api/events'
 import { getCategories } from '@/services/api/categories'
-import { EventCreate } from '@/lib/types'
+import type { Category } from '@/lib/types/event'
+import type { TicketTypeFormData } from '@/lib/types/ticketType'
 
-// Componente Textarea personalizado (basado en Input)
-interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
-  label?: React.ReactNode
-  error?: string
-}
-
-const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ label, error, className = '', ...props }, ref) => {
-    const textareaId = `textarea-${Math.random().toString(36).substr(2, 9)}`
-    
+const Textarea = React.forwardRef<HTMLTextAreaElement, any>(
+  ({ label, error, className = '', required, ...props }, ref) => {
     return (
       <div className="w-full">
         {label && (
-          <label htmlFor={textareaId} className="mb-2 block text-sm font-semibold text-gray-800">
-            {label}
+          <label className="mb-2 block text-sm font-semibold text-gray-800">
+            {label} {required && <span className="text-red-500">*</span>}
           </label>
         )}
         <textarea
-          id={textareaId}
-          className={`flex w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-transparent placeholder:text-gray-400 disabled:cursor-not-allowed disabled:opacity-50 resize-none transition-all ${error ? 'border-red-500 focus-visible:ring-red-500' : ''} ${className}`}
+          className={`flex w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-gray-100 disabled:cursor-not-allowed ${
+            error ? 'border-red-500' : ''
+          } ${className}`}
           ref={ref}
           {...props}
         />
@@ -44,577 +37,735 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 )
 Textarea.displayName = 'Textarea'
 
-// Alert Component
-const Alert = ({ children, variant = 'info' }: { children: React.ReactNode, variant?: 'success' | 'error' | 'info' }) => {
-  const variants = {
+const Alert = ({ 
+  children, 
+  variant = 'info' 
+}: { 
+  children: React.ReactNode
+  variant?: 'success' | 'error' | 'warning' | 'info'
+}) => {
+  const styles = {
     success: 'bg-green-50 border-green-200 text-green-800',
     error: 'bg-red-50 border-red-200 text-red-800',
+    warning: 'bg-yellow-50 border-yellow-200 text-yellow-800',
     info: 'bg-blue-50 border-blue-200 text-blue-800'
   }
   
   const icons = {
-    success: <CheckCircle className="h-5 w-5 text-green-600" />,
-    error: <AlertCircle className="h-5 w-5 text-red-600" />,
-    info: <AlertCircle className="h-5 w-5 text-blue-600" />
+    success: <CheckCircle className="h-5 w-5" />,
+    error: <AlertCircle className="h-5 w-5" />,
+    warning: <AlertCircle className="h-5 w-5" />,
+    info: <AlertCircle className="h-5 w-5" />
   }
   
   return (
-    <div className={`border rounded-lg p-4 flex items-start space-x-3 ${variants[variant]}`}>
+    <div className={`border rounded-lg p-4 flex items-start space-x-3 mb-6 ${styles[variant]}`}>
       {icons[variant]}
       <div className="flex-1">{children}</div>
     </div>
   )
 }
 
+const ProgressStep = ({ 
+  step, 
+  label, 
+  currentStep, 
+  isLast = false 
+}: { 
+  step: number
+  label: string
+  currentStep: number
+  isLast?: boolean
+}) => {
+  const isActive = currentStep >= step
+  const isCompleted = currentStep > step
+  
+  return (
+    <>
+      <div className="flex items-center space-x-2">
+        <div
+          className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${
+            isActive ? 'bg-primary-600 text-white scale-110' : 'bg-gray-200 text-gray-500'
+          }`}
+        >
+          {isCompleted ? <CheckCircle size={20} /> : step}
+        </div>
+        <span className={`font-medium hidden sm:inline ${isActive ? 'text-primary-600' : 'text-gray-400'}`}>
+          {label}
+        </span>
+      </div>
+      {!isLast && (
+        <div className={`w-16 h-1 transition-all ${isActive ? 'bg-primary-600' : 'bg-gray-300'}`} />
+      )}
+    </>
+  )
+}
+
 export default function CrearEventoPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [loadingCategories, setLoadingCategories] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
-  const [loadingCategories, setLoadingCategories] = useState(true)
+  const [currentStep, setCurrentStep] = useState(1)
+  
+  // Refs para inputs de archivo
+  const multimediaInputRef = React.useRef<HTMLInputElement>(null)
+  
+  // Estados para archivos
+  const [imagenPrincipalFile, setImagenPrincipalFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string>('')
+  const [multimediaFiles, setMultimediaFiles] = useState<File[]>([])
   
   const [formData, setFormData] = useState({
     nombre: '',
     categoria: '',
     descripcion: '',
-    informacionAdicional: '',
     ubicacion: '',
     capacidad: '',
-    video: null as File | null,
-    imagen: null as File | null,
-    seRepite: false,
-    fechaInicio: {
-      dia: '25',
-      mes: 'octubre',
-      año: '2025',
-      hora: '20',
-      minuto: '00'
-    },
-    fechaFin: {
-      dia: '25',
-      mes: 'octubre',
-      año: '2025',
-      hora: '23',
-      minuto: '00'
-    }
+    fechaInicio: '',
+    fechaFin: '',
+    imagenPrincipal: '',
+    multimedia: [] as string[]
   })
 
+  const [ticketTypes, setTicketTypes] = useState<TicketTypeFormData[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // Load categories on mount
+  // Manejo de imagen principal
+  const handleImagenPrincipalChange = (file: File | null) => {
+    if (file) {
+      setImagenPrincipalFile(file)
+      const url = URL.createObjectURL(file)
+      setPreviewUrl(url)
+      // Aquí podrías subir el archivo a un servidor y obtener la URL
+      // Por ahora, simulamos guardando el nombre del archivo
+      handleInputChange('imagenPrincipal', `url-de-${file.name}`)
+    } else {
+      setImagenPrincipalFile(null)
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+      setPreviewUrl('')
+      handleInputChange('imagenPrincipal', '')
+    }
+  }
+
+  // Manejo de archivos multimedia
+  const handleMultimediaFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (files && files.length > 0) {
+      const newFiles = Array.from(files)
+      setMultimediaFiles(prev => [...prev, ...newFiles])
+      
+      // Simular URLs para cada archivo
+      const newUrls = newFiles.map(file => `url-de-${file.name}`)
+      handleInputChange('multimedia', [...formData.multimedia, ...newUrls])
+    }
+    
+    // Resetear el input para permitir seleccionar los mismos archivos nuevamente
+    if (multimediaInputRef.current) {
+      multimediaInputRef.current.value = ''
+    }
+  }
+
+  // Eliminar archivo multimedia
+  const handleRemoveMultimediaFile = (index: number) => {
+    setMultimediaFiles(prev => prev.filter((_, i) => i !== index))
+    handleInputChange('multimedia', formData.multimedia.filter((_, i) => i !== index))
+  }
+
+  // Limpiar URLs cuando el componente se desmonte
+  React.useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
+
+  // Cargar categorías
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const data:Category[] = await getCategories()
-        console.log(data)
-        setCategories([...data])
+        setLoadingCategories(true)
+        const response = await getCategories(true)
+        setCategories(response.categories || [])
       } catch (err) {
         console.error('Error loading categories:', err)
+        setCategories([])
       } finally {
         setLoadingCategories(false)
       }
     }
-    
+
     loadCategories()
   }, [])
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }))
     }
+    setError(null)
   }
 
-  const handleDateChange = (type: 'fechaInicio' | 'fechaFin', field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [type]: { ...prev[type], [field]: value }
-    }))
-  }
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files && e.target.files[0]
-    if (file) {
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        setErrors(prev => ({ ...prev, imagen: 'La imagen no debe superar los 5MB' }))
-        return
-      }
-      setFormData(prev => ({ ...prev, imagen: file }))
-      setErrors(prev => ({ ...prev, imagen: '' }))
-    }
-  }
-
-  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files && e.target.files[0]
-    if (file) {
-      // Validate file size (max 50MB)
-      if (file.size > 50 * 1024 * 1024) {
-        setErrors(prev => ({ ...prev, video: 'El video no debe superar los 50MB' }))
-        return
-      }
-      setFormData(prev => ({ ...prev, video: file }))
-      setErrors(prev => ({ ...prev, video: '' }))
-    }
-  }
-
-  // Convert date parts to ISO string
-  const constructDateISO = (dateObj: typeof formData.fechaInicio): string => {
-    const mesesMap: Record<string, string> = {
-      'enero': '01', 'febrero': '02', 'marzo': '03', 'abril': '04',
-      'mayo': '05', 'junio': '06', 'julio': '07', 'agosto': '08',
-      'septiembre': '09', 'octubre': '10', 'noviembre': '11', 'diciembre': '12'
-    }
-    
-    const mes = mesesMap[dateObj.mes]
-    const dia = dateObj.dia.padStart(2, '0')
-    const hora = dateObj.hora.padStart(2, '0')
-    const minuto = dateObj.minuto.padStart(2, '0')
-    
-    return `${dateObj.año}-${mes}-${dia}T${hora}:${minuto}:00`
-  }
-
-  // Validate form
-  const validateForm = (): boolean => {
+  const validateStep1 = (): boolean => {
     const newErrors: Record<string, string> = {}
 
     if (!formData.nombre.trim()) {
       newErrors.nombre = 'El nombre del evento es requerido'
-    } else if (formData.nombre.length < 3) {
-      newErrors.nombre = 'El nombre debe tener al menos 3 caracteres'
+    } else if (formData.nombre.trim().length < 5) {
+      newErrors.nombre = 'El nombre debe tener al menos 5 caracteres'
     }
 
     if (!formData.descripcion.trim()) {
       newErrors.descripcion = 'La descripción es requerida'
+    } else if (formData.descripcion.trim().length < 20) {
+      newErrors.descripcion = 'La descripción debe tener al menos 20 caracteres'
     }
 
     if (!formData.ubicacion.trim()) {
       newErrors.ubicacion = 'La ubicación es requerida'
     }
 
-    if (!formData.capacidad) {
-      newErrors.capacidad = 'La capacidad es requerida'
-    } else if (parseInt(formData.capacidad) <= 0) {
-      newErrors.capacidad = 'La capacidad debe ser mayor a 0'
+    const capacity = parseInt(formData.capacidad)
+    if (!formData.capacidad || isNaN(capacity) || capacity <= 0) {
+      newErrors.capacidad = 'La capacidad debe ser un número mayor a 0'
+    } else if (capacity > 100000) {
+      newErrors.capacidad = 'La capacidad no puede exceder 100,000 personas'
     }
 
-    // Validate dates
-    const startDate = new Date(constructDateISO(formData.fechaInicio))
-    const endDate = new Date(constructDateISO(formData.fechaFin))
-    const now = new Date()
-
-    if (startDate <= now) {
-      newErrors.fechaInicio = 'La fecha de inicio debe ser en el futuro'
+    if (!formData.fechaInicio) {
+      newErrors.fechaInicio = 'La fecha de inicio es requerida'
+    } else {
+      const now = new Date()
+      const startDate = new Date(formData.fechaInicio)
+      if (startDate < now) {
+        newErrors.fechaInicio = 'La fecha de inicio no puede ser en el pasado'
+      }
     }
 
-    if (endDate <= startDate) {
-      newErrors.fechaFin = 'La fecha de fin debe ser posterior a la fecha de inicio'
+    if (!formData.fechaFin) {
+      newErrors.fechaFin = 'La fecha de fin es requerida'
+    }
+    
+    if (formData.fechaInicio && formData.fechaFin) {
+      const startDate = new Date(formData.fechaInicio)
+      const endDate = new Date(formData.fechaFin)
+      
+      if (endDate <= startDate) {
+        newErrors.fechaFin = 'La fecha de fin debe ser posterior a la fecha de inicio'
+      }
+      
+      const duration = endDate.getTime() - startDate.getTime()
+      const maxDuration = 30 * 24 * 60 * 60 * 1000 // 30 días
+      
+      if (duration > maxDuration) {
+        newErrors.fechaFin = 'El evento no puede durar más de 30 días'
+      }
     }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = async () => {
-    setError(null)
-    setSuccess(false)
+  const validateStep2 = (): boolean => {
+    const newErrors: Record<string, string> = {}
+    
+    if (ticketTypes.length === 0) {
+      newErrors.ticketTypes = 'Debes agregar al menos un tipo de entrada'
+      setErrors(newErrors)
+      return false
+    }
 
-    // Validate form
-    if (!validateForm()) {
-      setError('Por favor, corrige los errores en el formulario')
+    const totalCapacity = parseInt(formData.capacidad)
+    let totalTickets = 0
+
+    ticketTypes.forEach(tt => {
+      const quantity = parseInt(tt.quantity)
+      if (!isNaN(quantity)) {
+        totalTickets += quantity
+      }
+    })
+
+    if (totalTickets > totalCapacity) {
+      newErrors.ticketTypes = `El total de entradas (${totalTickets}) excede la capacidad del evento (${totalCapacity})`
+    }
+
+    if (totalTickets === 0) {
+      newErrors.ticketTypes = 'Debes asignar al menos una entrada'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleNextStep = () => {
+    if (validateStep1()) {
+      setCurrentStep(2)
+      setError(null)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } else {
+      setError('Por favor corrige los errores en el formulario')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
+  const handlePreviousStep = () => {
+    setCurrentStep(1)
+    setError(null)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleSubmit = async () => {
+    if (!validateStep2()) {
+      setError('Por favor corrige los errores en los tipos de entrada')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
 
     setLoading(true)
+    setError(null)
 
     try {
-      // TODO: Upload multimedia files first and get URLs
-      // For now, we'll use empty arrays
-      const multimediaUrls: string[] = []
+      // Preparar multimedia (filtrar URLs vacías)
+      const multimediaUrls = [
+        formData.imagenPrincipal,
+        ...formData.multimedia.filter(url => url.trim())
+      ].filter(url => url.trim())
 
-      // Prepare event data
-      const eventData: EventCreate = {
-        title: formData.nombre,
-        description: formData.descripcion,
-        startDate: constructDateISO(formData.fechaInicio),
-        endDate: constructDateISO(formData.fechaFin),
-        venue: formData.ubicacion,
-        totalCapacity: parseInt(formData.capacidad),
-        multimedia: multimediaUrls,
-        category_id: formData.categoria || undefined
+      const eventWithTicketTypes = {
+        event: {
+          title: formData.nombre.trim(),
+          description: formData.descripcion.trim(),
+          startDate: new Date(formData.fechaInicio).toISOString(),
+          endDate: new Date(formData.fechaFin).toISOString(),
+          venue: formData.ubicacion.trim(),
+          totalCapacity: parseInt(formData.capacidad),
+          multimedia: multimediaUrls,
+          category_id: formData.categoria || undefined
+        },
+        ticketTypes: ticketTypes.map(tt => ({
+          name: tt.name.trim(),
+          description: tt.description.trim() || undefined,
+          price: parseFloat(tt.price),
+          quantity: parseInt(tt.quantity),
+          maxPerPurchase: tt.maxPerPurchase ? parseInt(tt.maxPerPurchase) : undefined,
+          salesStartDate: undefined,
+          salesEndDate: undefined
+        }))
       }
 
-      // Create event
-      const response = await createEvent(eventData)
-
+      await createEventWithTicketTypes(eventWithTicketTypes)
+      
       setSuccess(true)
       
-      // Redirect to event detail or my events after 2 seconds
       setTimeout(() => {
-        router.push(`/panel/my-events`)
+        router.push('/panel/my-events')
       }, 2000)
-
     } catch (err: any) {
-      console.error('Error creating event:', err)
-      setError(err.message || 'Error al crear el evento. Por favor, intenta de nuevo.')
+      console.error('Error al crear evento:', err)
+      
+      const errorMessage = 
+        err.response?.data?.detail || 
+        err.response?.data?.message || 
+        err.message || 
+        'Error al crear el evento. Por favor intenta nuevamente.'
+      
+      setError(errorMessage)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     } finally {
       setLoading(false)
     }
   }
 
-  const meses = [
-    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
-  ]
+  const totalTicketsCapacity = ticketTypes.reduce(
+    (sum, tt) => sum + (parseInt(tt.quantity) || 0), 
+    0
+  )
+  const totalEventCapacity = parseInt(formData.capacidad) || 0
+  const remainingCapacity = totalEventCapacity - totalTicketsCapacity
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <main className="flex-grow">
-        <Container className="py-8">
+        <Container className="py-8 max-w-5xl">
+          {/* Header */}
+          <div className="mb-6">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.back()}
+              className="mb-4"
+            >
+              <ArrowLeft size={16} className="mr-2" />
+              Volver
+            </Button>
+            
+            <h1 className="text-3xl font-bold text-gray-900">Crear Nuevo Evento</h1>
+            <p className="text-gray-600 mt-2">
+              Completa la información para publicar tu evento
+            </p>
+          </div>
+
           {/* Alerts */}
           {error && (
             <Alert variant="error">
-              <p className="font-medium">Error</p>
-              <p className="text-sm">{error}</p>
+              <p className="font-medium">{error}</p>
             </Alert>
           )}
-
+          
           {success && (
             <Alert variant="success">
-              <p className="font-medium">¡Evento creado exitosamente!</p>
-              <p className="text-sm">Redirigiendo...</p>
+              <div>
+                <p className="font-medium">¡Evento creado exitosamente!</p>
+                <p className="text-sm mt-1">Redirigiendo a tus eventos...</p>
+              </div>
             </Alert>
           )}
 
-          {/* Header */}
-          <Card variant="default" className="mb-6 mt-4">
-            <CardHeader>
-              <div className="flex items-center space-x-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-xl flex items-center justify-center text-2xl font-bold shadow-md">
-                  1
-                </div>
-                <CardTitle className="text-3xl bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">
+          {/* Progress Indicator */}
+          <div className="mb-8 flex items-center justify-center space-x-4 bg-white rounded-lg p-6 shadow-sm">
+            <ProgressStep step={1} label="Detalles del Evento" currentStep={currentStep} />
+            <ProgressStep step={2} label="Tipos de Entrada" currentStep={currentStep} isLast />
+          </div>
+
+          {/* STEP 1: Event Details */}
+          {currentStep === 1 && (
+            <Card variant="default" className="shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-primary-50 to-blue-50">
+                <CardTitle className="text-2xl flex items-center gap-2">
+                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-600 text-white text-sm font-bold">
+                    1
+                  </span>
                   Detalles del Evento
                 </CardTitle>
-              </div>
-            </CardHeader>
-          </Card>
-
-          {/* Formulario */}
-          <Card variant="default">
-            <CardContent className="p-8">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Columna izquierda */}
-                <div className="space-y-6">
+                <p className="text-gray-600 mt-2">
+                  Información básica sobre tu evento
+                </p>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <Input
-                    label={
-                      <>
-                        Nombre del Evento <span className="text-red-500">*</span>
-                      </>
-                    }
-                    placeholder="Dale un nombre corto y llamativo."
+                    label="Nombre del Evento"
+                    placeholder="Ej: Concierto de Rock"
                     value={formData.nombre}
                     onChange={(e) => handleInputChange('nombre', e.target.value)}
                     error={errors.nombre}
+                    required
+                    disabled={loading}
                   />
 
                   <Select
-                    label="Elige una Categoría"
+                    label="Categoría"
                     value={formData.categoria}
                     onChange={(e) => handleInputChange('categoria', e.target.value)}
-                    disabled={loadingCategories}
+                    disabled={loadingCategories || loading}
                   >
-                    <option value="">{loadingCategories ? 'Cargando categorías...' : 'Elige una categoría'}</option>
-                    {categories.map(category => (
-                      <option key={category.id} value={category.id}>
-                        {category.icon} {category.name}
+                    <option value="">
+                      {loadingCategories ? 'Cargando...' : 'Selecciona una categoría (opcional)'}
+                    </option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.icon} {cat.name}
                       </option>
                     ))}
                   </Select>
 
-                  <Textarea
-                    label={
-                      <>
-                        Descripción del Evento <span className="text-red-500">*</span>
-                      </>
-                    }
-                    placeholder="Escribe un párrafo corto pero potente que describa tu evento (Punchline)"
-                    rows={4}
-                    value={formData.descripcion}
-                    onChange={(e) => handleInputChange('descripcion', e.target.value)}
-                    error={errors.descripcion}
-                  />
+                  <div className="md:col-span-2">
+                    <Textarea
+                      label="Descripción"
+                      placeholder="Describe tu evento en detalle..."
+                      rows={5}
+                      value={formData.descripcion}
+                      onChange={(e) => handleInputChange('descripcion', e.target.value)}
+                      error={errors.descripcion}
+                      required
+                      disabled={loading}
+                    />
+                  </div>
 
                   <Input
-                    label={
-                      <>
-                        Ubicación / Venue <span className="text-red-500">*</span>
-                      </>
-                    }
+                    label="Ubicación"
                     placeholder="Ej: Estadio Nacional, Lima"
                     value={formData.ubicacion}
                     onChange={(e) => handleInputChange('ubicacion', e.target.value)}
                     error={errors.ubicacion}
+                    required
+                    disabled={loading}
                   />
 
                   <Input
-                    label={
-                      <>
-                        Capacidad Total <span className="text-red-500">*</span>
-                      </>
-                    }
+                    label="Capacidad Total"
                     type="number"
                     min="1"
-                    placeholder="Ej: 5000"
+                    placeholder="Ej: 1000"
                     value={formData.capacidad}
                     onChange={(e) => handleInputChange('capacidad', e.target.value)}
                     error={errors.capacidad}
+                    required
+                    disabled={loading}
                   />
 
-                  <Textarea
-                    label="Información adicional"
-                    placeholder="Dale a los usuarios más información: detalles del evento, panelistas, links relacionados, cronograma del evento, etc."
-                    rows={5}
-                    value={formData.informacionAdicional}
-                    onChange={(e) => handleInputChange('informacionAdicional', e.target.value)}
+                  <Input
+                    label="Fecha y Hora de Inicio"
+                    type="datetime-local"
+                    value={formData.fechaInicio}
+                    onChange={(e) => handleInputChange('fechaInicio', e.target.value)}
+                    error={errors.fechaInicio}
+                    required
+                    disabled={loading}
+                  />
+
+                  <Input
+                    label="Fecha y Hora de Fin"
+                    type="datetime-local"
+                    value={formData.fechaFin}
+                    onChange={(e) => handleInputChange('fechaFin', e.target.value)}
+                    error={errors.fechaFin}
+                    required
+                    disabled={loading}
                   />
                 </div>
 
-                {/* Columna derecha */}
-                <div className="space-y-6">
-                  {/* Imagen */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-800 mb-2">
-                      Image <span className="text-red-500">*</span>{' '}
-                      <span className="text-gray-500 font-normal">( 836px x 522px )</span>
-                    </label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-16 text-center hover:border-primary-500 hover:bg-primary-50 transition-all cursor-pointer bg-gray-50">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                        id="image-upload"
-                      />
-                      <label htmlFor="image-upload" className="cursor-pointer block">
-                        <div className="text-7xl text-gray-300 mb-4 font-bold">T</div>
-                        <div className="flex items-center justify-center space-x-2 text-primary-600 font-medium">
-                          <Upload size={20} />
-                          <span>Cargar Imagen</span>
-                        </div>
-                        {formData.imagen && (
-                          <p className="mt-3 text-sm text-gray-600 font-medium">
-                            ✓ {formData.imagen.name}
-                          </p>
+                {/* Sección de Multimedia */}
+                <div className="md:col-span-2 mt-6">
+                  <div className="border-t pt-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Contenido Visual</h3>
+          
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+                      {/* --- Imagen Principal (Carga de Archivo) --- */}
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-white hover:border-primary-400 transition-colors">
+                        <label className="mb-2 block text-sm font-semibold text-gray-800">
+                          📸 Imagen Principal
+                        </label>
+                        
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleImagenPrincipalChange(e.target.files ? e.target.files[0] : null)}
+                          disabled={loading}
+                          className="mb-2"
+                        />
+                        
+                        <p className="text-xs text-gray-500 mt-1">
+                          💡 Imagen destacada que se mostrará en la portada del evento
+                        </p>
+                        
+                        {/* Vista Previa de la Imagen Principal */}
+                        {previewUrl ? (
+                          <div className="mt-3 relative group">
+                            <img 
+                              src={previewUrl} 
+                              alt="Vista previa" 
+                              className="w-full h-48 object-cover rounded-lg shadow-sm"
+                              onError={(e) => {
+                                e.currentTarget.src = 'https://placehold.co/400x300/f87171/white?text=Error+de+Carga'
+                                e.currentTarget.onerror = null
+                              }}
+                            />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleImagenPrincipalChange(null)}
+                              disabled={loading}
+                              type="button"
+                              className="absolute top-2 right-2 bg-red-500 text-white hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              ✕
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="mt-3 flex items-center justify-center h-48 bg-gray-50 rounded-lg border border-gray-200">
+                            <div className="text-center text-gray-400">
+                              <svg className="mx-auto h-12 w-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              <p className="text-sm">No hay imagen seleccionada</p>
+                            </div>
+                          </div>
                         )}
-                      </label>
-                    </div>
-                    {errors.imagen && (
-                      <p className="mt-1 text-sm text-red-600">{errors.imagen}</p>
-                    )}
-                    <p className="mt-2 text-xs text-gray-500">
-                      Nota: La funcionalidad de subida de archivos será implementada próximamente
-                    </p>
-                  </div>
+                      </div>
 
-                  {/* Video */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-800 mb-2">
-                      Video (Opcional)
-                    </label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-primary-500 hover:bg-primary-50 transition-all cursor-pointer bg-gray-50">
-                      <input
-                        type="file"
-                        accept="video/*"
-                        onChange={handleVideoUpload}
-                        className="hidden"
-                        id="video-upload"
-                      />
-                      <label htmlFor="video-upload" className="cursor-pointer block">
-                        <div className="text-5xl text-gray-300 mb-3">🎥</div>
-                        <div className="flex items-center justify-center space-x-2 text-primary-600 font-medium">
-                          <Upload size={20} />
-                          <span>Cargar Video</span>
+                      {/* --- Contenido Multimedia (Carga Múltiple) --- */}
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-white hover:border-primary-400 transition-colors">
+                        <label className="mb-2 block text-sm font-semibold text-gray-800">
+                          🎬 Contenido Multimedia
+                        </label>
+                        
+                        {/* Input de archivo oculto */}
+                        <Input
+                          type="file"
+                          multiple
+                          accept="image/*,video/*,.gif"
+                          ref={multimediaInputRef}
+                          onChange={handleMultimediaFileChange}
+                          disabled={loading}
+                          className="hidden"
+                        />
+                        
+                        {/* Botón que activa el input oculto */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => multimediaInputRef.current?.click()}
+                          disabled={loading}
+                          type="button"
+                          className="w-full mb-2"
+                        >
+                          + Agregar Archivos
+                        </Button>
+                        
+                        <p className="text-xs text-gray-500 mb-3">
+                          🎥 Videos, GIFs o imágenes adicionales del evento
+                        </p>
+                        
+                        {/* Lista de archivos seleccionados */}
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {multimediaFiles.length > 0 ? (
+                            multimediaFiles.map((file, index) => (
+                              <div key={index} className="flex gap-2 items-center justify-between p-2 pl-3 border rounded-md bg-gray-50 hover:bg-gray-100 transition-colors">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <span className="text-lg flex-shrink-0">
+                                    {file.type.startsWith('image/') ? '🖼️' : file.type.startsWith('video/') ? '🎬' : '📁'}
+                                  </span>
+                                  <span className="text-sm text-gray-700 truncate" title={file.name}>
+                                    {file.name}
+                                  </span>
+                                  <span className="text-xs text-gray-500 flex-shrink-0">
+                                    ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                                  </span>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleRemoveMultimediaFile(index)}
+                                  disabled={loading}
+                                  type="button"
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-50 px-2 flex-shrink-0"
+                                >
+                                  ✕
+                                </Button>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="flex items-center justify-center h-48 bg-gray-50 rounded-lg border border-gray-200">
+                              <div className="text-center text-gray-400">
+                                <svg className="mx-auto h-12 w-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                                <p className="text-sm">No hay archivos multimedia</p>
+                                <p className="text-xs mt-1">Haz clic en "Agregar Archivos"</p>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        {formData.video && (
-                          <p className="mt-3 text-sm text-gray-600 font-medium">
-                            ✓ {formData.video.name}
-                          </p>
-                        )}
-                      </label>
+                      </div>
+
                     </div>
-                    {errors.video && (
-                      <p className="mt-1 text-sm text-red-600">{errors.video}</p>
-                    )}
                   </div>
                 </div>
-              </div>
+                <div className="flex justify-end gap-4 pt-4 border-t">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => router.back()}
+                    disabled={loading}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    variant="primary" 
+                    onClick={handleNextStep}
+                    disabled={loading}
+                  >
+                    Siguiente: Tipos de Entrada
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-              {/* Checkbox evento se repite */}
-              <div className="mt-8 pt-6 border-t border-gray-200">
-                <Checkbox
-                  label={
-                    <span className="flex items-center space-x-2">
-                      <Repeat size={20} />
-                      <span>Este evento se repite (próximamente)</span>
-                    </span>
-                  }
-                  checked={formData.seRepite}
-                  onChange={(e) => handleInputChange('seRepite', e.target.checked)}
-                  disabled
+          {/* STEP 2: Ticket Types */}
+          {currentStep === 2 && (
+            <Card variant="default" className="shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-primary-50 to-blue-50">
+                <CardTitle className="text-2xl flex items-center gap-2">
+                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-600 text-white text-sm font-bold">
+                    2
+                  </span>
+                  Tipos de Entrada
+                </CardTitle>
+                <p className="text-gray-600 mt-2">
+                  Configura los diferentes tipos de entradas y sus precios
+                </p>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                {/* Capacity Summary */}
+                <div
+                  className={`p-5 rounded-xl border-2 transition-all ${
+                    remainingCapacity < 0
+                      ? 'bg-red-50 border-red-300'
+                      : remainingCapacity === 0
+                      ? 'bg-green-50 border-green-300'
+                      : 'bg-blue-50 border-blue-300'
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row justify-between gap-3 text-sm font-medium">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-700">📊 Capacidad Total:</span>
+                      <span className="font-bold text-gray-900">{totalEventCapacity}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-700">🎟️ Asignado:</span>
+                      <span className="font-bold text-gray-900">{totalTicketsCapacity}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-700">✨ Disponible:</span>
+                      <span
+                        className={`font-bold ${
+                          remainingCapacity < 0
+                            ? 'text-red-600'
+                            : remainingCapacity === 0
+                            ? 'text-green-600'
+                            : 'text-blue-600'
+                        }`}
+                      >
+                        {remainingCapacity}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ticket Types Manager */}
+                <TicketTypeManager
+                  ticketTypes={ticketTypes}
+                  onChange={setTicketTypes}
+                  errors={errors}
                 />
-              </div>
 
-              {/* Selectores de fecha */}
-              <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Fecha de inicio */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-800 mb-3">
-                    Fecha de inicio del evento <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <select
-                      value={formData.fechaInicio.dia}
-                      onChange={(e) => handleDateChange('fechaInicio', 'dia', e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
-                    >
-                      {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
-                        <option key={d} value={d}>{d}</option>
-                      ))}
-                    </select>
-                    <span className="text-gray-500">de</span>
-                    <select
-                      value={formData.fechaInicio.mes}
-                      onChange={(e) => handleDateChange('fechaInicio', 'mes', e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
-                    >
-                      {meses.map(m => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
-                    <span className="text-gray-500">de</span>
-                    <select
-                      value={formData.fechaInicio.año}
-                      onChange={(e) => handleDateChange('fechaInicio', 'año', e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
-                    >
-                      {Array.from({ length: 10 }, (_, i) => 2025 + i).map(y => (
-                        <option key={y} value={y}>{y}</option>
-                      ))}
-                    </select>
-                    <span className="text-gray-500">,</span>
-                    <select
-                      value={formData.fechaInicio.hora}
-                      onChange={(e) => handleDateChange('fechaInicio', 'hora', e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
-                    >
-                      {Array.from({ length: 24 }, (_, i) => i).map(h => (
-                        <option key={h} value={h}>{h.toString().padStart(2, '0')}</option>
-                      ))}
-                    </select>
-                    <span className="text-gray-500">:</span>
-                    <select
-                      value={formData.fechaInicio.minuto}
-                      onChange={(e) => handleDateChange('fechaInicio', 'minuto', e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
-                    >
-                      {Array.from({ length: 60 }, (_, i) => i).map(m => (
-                        <option key={m} value={m}>{m.toString().padStart(2, '0')}</option>
-                      ))}
-                    </select>
-                  </div>
-                  {errors.fechaInicio && (
-                    <p className="mt-1 text-sm text-red-600">{errors.fechaInicio}</p>
-                  )}
+                <div className="flex justify-between gap-4 pt-4 border-t">
+                  <Button 
+                    variant="outline" 
+                    onClick={handlePreviousStep}
+                    disabled={loading}
+                  >
+                    Atrás
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={handleSubmit}
+                    loading={loading}
+                    disabled={loading || ticketTypes.length === 0}
+                  >
+                    {loading ? 'Creando Evento...' : 'Crear Evento'}
+                  </Button>
                 </div>
-
-                {/* Fecha de fin */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-800 mb-3">
-                    El evento finaliza <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <select
-                      value={formData.fechaFin.dia}
-                      onChange={(e) => handleDateChange('fechaFin', 'dia', e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
-                    >
-                      {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
-                        <option key={d} value={d}>{d}</option>
-                      ))}
-                    </select>
-                    <span className="text-gray-500">de</span>
-                    <select
-                      value={formData.fechaFin.mes}
-                      onChange={(e) => handleDateChange('fechaFin', 'mes', e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
-                    >
-                      {meses.map(m => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
-                    <span className="text-gray-500">de</span>
-                    <select
-                      value={formData.fechaFin.año}
-                      onChange={(e) => handleDateChange('fechaFin', 'año', e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
-                    >
-                      {Array.from({ length: 10 }, (_, i) => 2025 + i).map(y => (
-                        <option key={y} value={y}>{y}</option>
-                      ))}
-                    </select>
-                    <span className="text-gray-500">,</span>
-                    <select
-                      value={formData.fechaFin.hora}
-                      onChange={(e) => handleDateChange('fechaFin', 'hora', e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
-                    >
-                      {Array.from({ length: 24 }, (_, i) => i).map(h => (
-                        <option key={h} value={h}>{h.toString().padStart(2, '0')}</option>
-                      ))}
-                    </select>
-                    <span className="text-gray-500">:</span>
-                    <select
-                      value={formData.fechaFin.minuto}
-                      onChange={(e) => handleDateChange('fechaFin', 'minuto', e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
-                    >
-                      {Array.from({ length: 60 }, (_, i) => i).map(m => (
-                        <option key={m} value={m}>{m.toString().padStart(2, '0')}</option>
-                      ))}
-                    </select>
-                  </div>
-                  {errors.fechaFin && (
-                    <p className="mt-1 text-sm text-red-600">{errors.fechaFin}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Botones de acción */}
-              <div className="mt-10 flex flex-col sm:flex-row justify-end gap-4">
-                <Button 
-                  variant="outline" 
-                  size="lg"
-                  onClick={() => router.back()}
-                  disabled={loading}
-                >
-                  Cancelar
-                </Button>
-                <Button 
-                  variant="primary" 
-                  size="lg" 
-                  onClick={handleSubmit}
-                  loading={loading}
-                  disabled={loading}
-                >
-                  {loading ? 'Creando...' : 'Crear Evento'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </Container>
       </main>
     </div>

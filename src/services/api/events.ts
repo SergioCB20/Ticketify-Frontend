@@ -1,12 +1,11 @@
-// Event API calls
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
+import api, { handleApiError } from '../../lib/api'
 
 // Types
 export interface EventCreateData {
   title: string
   description?: string
-  startDate: string // ISO format
-  endDate: string // ISO format
+  startDate: string
+  endDate: string
   venue: string
   totalCapacity: number
   multimedia?: string[]
@@ -61,203 +60,177 @@ export interface EventFilters {
   start_date_to?: string
 }
 
-// Helper function to get auth headers
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('ticketify_access_token')
-  console.log(token)
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` })
-  }
+export interface EventWithTicketTypesData {
+  event: EventCreateData
+  ticketTypes: Array<{
+    name: string
+    description?: string
+    price: number
+    quantity: number
+    maxPerPurchase?: number
+    salesStartDate?: string
+    salesEndDate?: string
+  }>
 }
-
-// API Functions
 
 /**
  * Create a new event
  */
 export const createEvent = async (eventData: EventCreateData): Promise<EventResponse> => {
-  const response = await fetch(`${API_URL}/events/`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(eventData)
-  })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || 'Error al crear el evento')
+  try {
+    const response = await api.post<EventResponse>('/events/', eventData)
+    return response.data
+  } catch (error) {
+    throw handleApiError(error)
   }
+}
 
-  return response.json()
+/**
+ * Create event with ticket types
+ */
+export const createEventWithTicketTypes = async (
+  data: EventWithTicketTypesData
+): Promise<{ event: EventResponse; ticketTypes: any[] }> => {
+  try {
+    // Crear el evento
+    const event = await createEvent(data.event)
+    
+    // Crear los tipos de entrada en batch
+    const response = await api.post<any[]>('/ticket-types/batch', {
+      eventId: event.id,
+      ticketTypes: data.ticketTypes
+    })
+
+    return { event, ticketTypes: response.data }
+  } catch (error) {
+    throw handleApiError(error)
+  }
 }
 
 /**
  * Get list of events with filters
  */
 export const getEvents = async (filters?: EventFilters): Promise<EventListResponse> => {
-  const queryParams = new URLSearchParams()
-  
-  if (filters) {
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        queryParams.append(key, value.toString())
-      }
-    })
+  try {
+    const response = await api.get<EventListResponse>('/events/', { params: filters })
+    return response.data
+  } catch (error) {
+    throw handleApiError(error)
   }
-
-  const url = `${API_URL}/events/?${queryParams.toString()}`
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' }
-  })
-
-  if (!response.ok) {
-    throw new Error('Error al obtener eventos')
-  }
-
-  return response.json()
 }
 
 /**
  * Get event by ID
  */
 export const getEventById = async (eventId: string): Promise<EventResponse> => {
-  const response = await fetch(`${API_URL}/events/${eventId}`, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' }
-  })
-
-  if (!response.ok) {
-    throw new Error('Evento no encontrado')
+  try {
+    const response = await api.get<EventResponse>(`/events/${eventId}`)
+    return response.data
+  } catch (error) {
+    throw handleApiError(error)
   }
-
-  return response.json()
 }
 
 /**
  * Get upcoming events
  */
 export const getUpcomingEvents = async (page = 1, pageSize = 10): Promise<EventListResponse> => {
-  const response = await fetch(`${API_URL}/events/upcoming?page=${page}&page_size=${pageSize}`, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' }
-  })
-
-  if (!response.ok) {
-    throw new Error('Error al obtener eventos próximos')
+  try {
+    const response = await api.get<EventListResponse>('/events/upcoming', {
+      params: { page, page_size: pageSize }
+    })
+    return response.data
+  } catch (error) {
+    throw handleApiError(error)
   }
-
-  return response.json()
 }
 
 /**
  * Get featured events
  */
 export const getFeaturedEvents = async (limit = 6): Promise<EventResponse[]> => {
-  const response = await fetch(`${API_URL}/events/featured?limit=${limit}`, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' }
-  })
-
-  if (!response.ok) {
-    throw new Error('Error al obtener eventos destacados')
+  try {
+    const response = await api.get<EventResponse[]>('/events/featured', {
+      params: { limit }
+    })
+    return response.data
+  } catch (error) {
+    throw handleApiError(error)
   }
-
-  return response.json()
 }
 
 /**
  * Get my events (requires authentication)
  */
 export const getMyEvents = async (page = 1, pageSize = 10): Promise<EventListResponse> => {
-  const response = await fetch(`${API_URL}/events/my-events?page=${page}&page_size=${pageSize}`, {
-    method: 'GET',
-    headers: getAuthHeaders()
-  })
-
-  if (!response.ok) {
-    throw new Error('Error al obtener tus eventos')
+  try {
+    const response = await api.get<EventListResponse>('/events/my-events', {
+      params: { page, page_size: pageSize }
+    })
+    return response.data
+  } catch (error) {
+    throw handleApiError(error)
   }
-
-  return response.json()
 }
 
 /**
  * Search events
  */
 export const searchEvents = async (searchTerm: string, page = 1, pageSize = 10): Promise<EventListResponse> => {
-  const response = await fetch(`${API_URL}/events/search?q=${encodeURIComponent(searchTerm)}&page=${page}&page_size=${pageSize}`, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' }
-  })
-
-  if (!response.ok) {
-    throw new Error('Error al buscar eventos')
+  try {
+    const response = await api.get<EventListResponse>('/events/search', {
+      params: { q: searchTerm, page, page_size: pageSize }
+    })
+    return response.data
+  } catch (error) {
+    throw handleApiError(error)
   }
-
-  return response.json()
 }
 
 /**
  * Update event (requires authentication)
  */
 export const updateEvent = async (eventId: string, eventData: EventUpdateData): Promise<EventResponse> => {
-  const response = await fetch(`${API_URL}/events/${eventId}`, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(eventData)
-  })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || 'Error al actualizar el evento')
+  try {
+    const response = await api.put<EventResponse>(`/events/${eventId}`, eventData)
+    return response.data
+  } catch (error) {
+    throw handleApiError(error)
   }
-
-  return response.json()
 }
 
 /**
  * Update event status (requires authentication)
  */
 export const updateEventStatus = async (eventId: string, status: string): Promise<EventResponse> => {
-  const response = await fetch(`${API_URL}/events/${eventId}/status`, {
-    method: 'PATCH',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ status })
-  })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || 'Error al actualizar el estado del evento')
+  try {
+    const response = await api.patch<EventResponse>(`/events/${eventId}/status`, { status })
+    return response.data
+  } catch (error) {
+    throw handleApiError(error)
   }
-
-  return response.json()
 }
 
 /**
  * Delete event (requires authentication)
  */
 export const deleteEvent = async (eventId: string): Promise<void> => {
-  const response = await fetch(`${API_URL}/events/${eventId}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders()
-  })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || 'Error al eliminar el evento')
+  try {
+    await api.delete(`/events/${eventId}`)
+  } catch (error) {
+    throw handleApiError(error)
   }
 }
 
 /**
- * Publish event (change status to PUBLISHED)
+ * Publish event
  */
 export const publishEvent = async (eventId: string): Promise<EventResponse> => {
   return updateEventStatus(eventId, 'PUBLISHED')
 }
 
 /**
- * Cancel event (change status to CANCELLED)
+ * Cancel event
  */
 export const cancelEvent = async (eventId: string): Promise<EventResponse> => {
   return updateEventStatus(eventId, 'CANCELLED')

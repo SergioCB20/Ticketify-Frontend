@@ -12,65 +12,48 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { formatDate } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
- 
 
-// --- Tipo de datos ---
-interface OrganizerEvent {
-  id: string;
-  title: string;
-  date: string;
-  location: string;
-  totalTickets: number;
-  soldTickets: number;
-  status: 'DRAFT' | 'PUBLISHED' | 'COMPLETED' | 'CANCELLED';
-  imageUrl?: string;
-}
+// 1. IMPORTA TU SERVICIO Y LA INTERFAZ CORRECTA
+import { getMyEvents, EventResponse } from '@/services/api/events' // Ajusta la ruta si es necesario
 
-const API_URL = 'http://localhost:8000';
+// (La interfaz OrganizerEvent ya no es necesaria, usamos EventResponse)
+
+// const API_URL = 'http://localhost:8000'; // Ya no es necesario, api.ts lo sabe
 
 // --- Componente ---
 export default function OrganizerEventsPage() {
   const [isLoading, setIsLoading] = useState(true);
-  const [events, setEvents] = useState<OrganizerEvent[]>([]);
+  // 2. USA LA INTERFAZ CORRECTA
+  const [events, setEvents] = useState<EventResponse[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
-  // --- Carga de Datos con FETCH ---
+  // --- Carga de Datos (LA FORMA CORRECTA) ---
   useEffect(() => {
-      const fetchOrganizerEvents = async () => {
-    setIsLoading(true);
-    try {
-      const token = localStorage.getItem('ticketify_access_token');
-      const user = localStorage.getItem('ticketify_user');
-      const id = user ? JSON.parse(user).id : null;
-
-      if (!token) throw new Error('No hay token en localStorage');
-
-      const response = await fetch(`${API_URL}/api/events/organizer/${id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error HTTP: ${response.status}`);
+    const fetchOrganizerEvents = async () => {
+      setIsLoading(true);
+      try {
+        // 3. LLAMA A LA FUNCIÓN CORRECTA DE TU API
+        //    api.ts añade el token automáticamente
+        //    events.ts llama a la URL correcta (/events/my-events)
+        const response = await getMyEvents();
+        
+        // 4. GUARDA LOS EVENTOS
+        setEvents(response.events); 
+        
+      } catch (error) {
+        console.error("Error al cargar eventos:", error);
+        setEvents([]);
+      } finally {
+        setIsLoading(false);
       }
-
-      const data: OrganizerEvent[] = await response.json();
-      setEvents(data);
-    } catch (error) {
-      console.error("Error al cargar eventos:", error);
-      setEvents([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+    };
 
     fetchOrganizerEvents();
   }, []);
+
+  // (El resto de tu código de filtrado y renderizado va aquí)
+  // ...
 
   // --- Filtrado ---
   const filteredEvents = events.filter(event => {
@@ -214,19 +197,19 @@ export default function OrganizerEventsPage() {
                     <CardContent className="p-0 flex-grow space-y-2 text-sm text-gray-600 mb-4">
                       <div className="flex items-center">
                         <Calendar className="mr-2 h-4 w-4 text-gray-500 flex-shrink-0" />
-                        {formatDate(event.date, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
+                        {formatDate(event.startDate, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
                       </div>
                       <div className="flex items-start">
                         <MapPin className="mr-2 h-4 w-4 text-gray-500 flex-shrink-0 mt-0.5" />
-                        <span className="line-clamp-2">{event.location}</span>
+                        <span className="line-clamp-2">{event.venue}</span>
                       </div>
                       <div className="flex items-center">
                         <Ticket className="mr-2 h-4 w-4 text-gray-500 flex-shrink-0" />
-                        <span className="font-medium text-gray-800">{event.soldTickets.toLocaleString()}</span>
+                        <span className="font-medium text-gray-800">{(event.totalCapacity - event.availableTickets).toLocaleString()}</span>
                         <span className="mx-1 text-gray-500">/</span>
-                        <span className="text-gray-700">{event.totalTickets.toLocaleString()} vendidos</span>
+                        <span className="text-gray-700">{event.totalCapacity.toLocaleString()} vendidos</span>
                         <span className="ml-2 font-semibold text-gray-900">
-                          ({event.totalTickets > 0 ? ((event.soldTickets / event.totalTickets) * 100).toFixed(0) : 0}%)
+                          ({event.totalCapacity > 0 ? (((event.totalCapacity - event.availableTickets) / event.totalCapacity) * 100).toFixed(0) : 0}%)
                         </span>
                       </div>
                     </CardContent>
