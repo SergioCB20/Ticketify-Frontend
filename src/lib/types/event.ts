@@ -34,11 +34,13 @@ export interface Event {
   status: EventStatus
   multimedia: string[]
   organizerId: string
-  categoryId?: string
   availableTickets: number
   isSoldOut: boolean
   createdAt: string
   updatedAt: string
+  minPrice?: number
+  maxPrice?: number
+  categoryId?: string | null
 }
 
 // EventDetail incluye la info completa del organizador y categoría

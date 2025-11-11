@@ -109,7 +109,7 @@ export default function EventsPage() {
                   description={event.description || ''}
                   date={event.startDate}
                   location={event.venue}
-                  price={0}
+                  price={event.minPrice ?? 0}
                   image={
                     event.multimedia && event.multimedia.length > 0
                       ? event.multimedia[0]

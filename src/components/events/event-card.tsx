@@ -63,7 +63,7 @@ const EventCard: React.FC<EventCardProps> = ({
   }
 
   const isLowStock = availableTickets !== undefined && availableTickets < 10
-  const isSoldOut = availableTickets === 0
+  const isSoldOut = availableTickets !== undefined && availableTickets <= 0
 
   // Manejar categoría como string u objeto
   const categoryName = typeof category === 'string' ? category : category?.name
@@ -227,15 +227,6 @@ const EventCard: React.FC<EventCardProps> = ({
           onClick={() => onViewDetails?.(id)}
         >
           Ver detalles
-        </Button>
-        <Button
-          variant="primary"
-          size="md"
-          className="flex-1"
-          disabled={isSoldOut}
-          onClick={() => onBuyTicket?.(id)}
-        >
-          {isSoldOut ? 'Agotado' : 'Comprar'}
         </Button>
       </CardFooter>
     </Card>
