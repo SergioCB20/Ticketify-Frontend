@@ -5,7 +5,8 @@ import type {
   AdminUser,
   AdminStats,
   BanUserRequest,
-  UpdateAdminRoleRequest
+  UpdateAdminRoleRequest,
+  CreateAdminRequest
 } from '../../lib/types'
 
 export class AdminService {
@@ -52,6 +53,15 @@ export class AdminService {
   static async getAdmins(): Promise<AdminUser[]> {
     try {
       const response = await api.get<AdminUser[]>('/admin/admins')
+      return response.data
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  }
+
+  static async createAdmin(data: CreateAdminRequest): Promise<AdminUser> {
+    try {
+      const response = await api.post<AdminUser>('/admin/admins', data)
       return response.data
     } catch (error) {
       throw handleApiError(error)

@@ -1,19 +1,22 @@
 'use client'
 
 import { useAuth } from '@/hooks/useAuth'
-import { useRouter } from 'next/navigation'
-import { useEffect, useState, useRef } from 'react'
-// Añadido 'CardDescription' aquí
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, Button, Badge, Avatar, Input } from '@/components/ui' 
-import { User, Mail, Phone, Calendar, Shield, MapPin, FileText, Edit2, Save, X, Eye, EyeOff, Camera } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useRef, useState } from 'react'
+// Componentes UI básicos
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from '@/components/ui'
+// Dialog se importa por separado
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { AuthService } from '@/services/api/auth'
+import { MercadoPagoService, type MercadoPagoStatus } from '@/services/api/mercadopago'
+import { StorageService } from '@/services/storage'
+import { AlertTriangle, Calendar, Camera, CheckCircle2, CreditCard, Edit2, Eye, EyeOff, FileText, Link2, Loader2, Mail, MapPin, Phone, Save, Shield, Unlink, User, X } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { Loader2, Ticket } from 'lucide-react' 
-import Link from 'next/link'
 
 export default function ProfilePage() {
   const { user, loading, isAuthenticated, updateUser } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [isChangingPassword, setIsChangingPassword] = useState(false)
@@ -22,6 +25,12 @@ export default function ProfilePage() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
+
+  // MercadoPago states
+  const [mpStatus, setMpStatus] = useState<MercadoPagoStatus | null>(null)
+  const [mpLoading, setMpLoading] = useState(true)
+  const [showDisconnectDialog, setShowDisconnectDialog] = useState(false)
+  const [isDisconnecting, setIsDisconnecting] = useState(false)
 
   // Form states
   const [formData, setFormData] = useState({
@@ -61,6 +70,68 @@ export default function ProfilePage() {
     }
   }, [user])
 
+  // Cargar estado de MercadoPago
+  useEffect(() => {
+    const loadMercadoPagoStatus = async () => {
+      try {
+        const status = await MercadoPagoService.getStatus()
+        setMpStatus(status)
+      } catch (error) {
+        console.error('Error loading MercadoPago status:', error)
+      } finally {
+        setMpLoading(false)
+      }
+    }
+
+    if (isAuthenticated) {
+      loadMercadoPagoStatus()
+    }
+  }, [isAuthenticated])
+
+  // Manejar resultado del callback de MercadoPago
+  useEffect(() => {
+    const mpResult = searchParams.get('mp')
+    const mpEmail = searchParams.get('email')
+    const mpReason = searchParams.get('reason')
+
+    // Solo procesar si hay parámetros de MP
+    if (!mpResult) return
+
+    // Flag para evitar ejecución duplicada (React 18 StrictMode)
+    let hasShownToast = false
+
+    if (!hasShownToast) {
+      if (mpResult === 'success') {
+        toast.success(`¡Cuenta de MercadoPago vinculada exitosamente! ${mpEmail ? `(${mpEmail})` : ''}`, {
+          duration: 5000,
+          icon: '🎉',
+          id: 'mp-success' // ID único para evitar duplicados
+        })
+        // Recargar estado de MercadoPago
+        MercadoPagoService.getStatus().then(setMpStatus)
+      } else if (mpResult === 'error') {
+        const errorMessages: Record<string, string> = {
+          'invalid_state': 'Error en el proceso de autorización. Por favor, intenta nuevamente.',
+          'already_connected': 'Ya tienes una cuenta de MercadoPago vinculada. Desvincúlala primero si deseas vincular otra.',
+          'account_already_linked': 'Esta cuenta de MercadoPago ya está vinculada a otro usuario. Por favor, usa otra cuenta.',
+          'unknown': 'Ocurrió un error inesperado. Por favor, intenta nuevamente.'
+        }
+        toast.error(errorMessages[mpReason || 'unknown'] || 'Error al vincular cuenta de MercadoPago', {
+          duration: 6000,
+          id: 'mp-error' // ID único para evitar duplicados
+        })
+      }
+      hasShownToast = true
+    }
+    
+    // Limpiar parámetros de URL después de un breve delay
+    const timer = setTimeout(() => {
+      router.replace('/panel/profile')
+    }, 100)
+
+    return () => clearTimeout(timer)
+  }, [searchParams, router])
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -85,28 +156,48 @@ export default function ProfilePage() {
     }))
   }
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('La imagen no debe superar los 5MB')
-        return
-      }
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0]
+  if (!file) return
 
-      if (!file.type.startsWith('image/')) {
-        toast.error('Solo se permiten imágenes')
-        return
-      }
-
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setPreviewImage(reader.result as string)
-      }
-      reader.readAsDataURL(file)
-      toast.success('Imagen cargada (pendiente de guardar)')
-    }
+  if (!file.type.startsWith('image/')) {
+    toast.error('Solo se permiten imágenes')
+    return
   }
 
+  // Crear un canvas para redimensionar/comprimir
+  const img = new Image()
+  img.src = URL.createObjectURL(file)
+  img.onload = () => {
+    const canvas = document.createElement('canvas')
+    const maxSize = 256 // ancho y alto máximo
+    let width = img.width
+    let height = img.height
+
+    if (width > height) {
+      if (width > maxSize) {
+        height = Math.round((height * maxSize) / width)
+        width = maxSize
+      }
+    } else {
+      if (height > maxSize) {
+        width = Math.round((width * maxSize) / height)
+        height = maxSize
+      }
+    }
+
+    canvas.width = width
+    canvas.height = height
+
+    const ctx = canvas.getContext('2d')
+    ctx?.drawImage(img, 0, 0, width, height)
+
+    // Convertir a base64 con calidad reducida y formato WebP
+    const compressedBase64 = canvas.toDataURL('image/webp', 0.6) // calidad 60%
+    setPreviewImage(compressedBase64)
+    toast.success('Imagen comprimida lista (pendiente de guardar)')
+  }
+}
   const handleSaveProfile = async () => {
     // Validaciones
     if (!formData.firstName.trim() || formData.firstName.length < 2) {
@@ -191,6 +282,40 @@ export default function ProfilePage() {
       toast.error(errorMessage)
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleConnectMercadoPago = () => {
+    // Obtener el token de acceso
+    const token = StorageService.getAccessToken()
+    if (!token) {
+      toast.error('No se encontró sesión activa. Por favor, inicia sesión nuevamente.')
+      return
+    }
+    
+    // Redirigir a la URL de OAuth (con token en desarrollo)
+    const connectUrl = MercadoPagoService.getConnectUrl(token)
+    window.location.href = connectUrl
+  }
+
+  const handleDisconnectMercadoPago = async () => {
+    setIsDisconnecting(true)
+    try {
+      await MercadoPagoService.disconnect()
+      toast.success('Cuenta de MercadoPago desvinculada correctamente')
+      // Actualizar estado
+      setMpStatus({
+        isConnected: false,
+        email: null,
+        connectedAt: null,
+        tokenExpired: null
+      })
+      setShowDisconnectDialog(false)
+    } catch (error: any) {
+      const errorMessage = typeof error === 'string' ? error : error?.message || 'Error al desvincular cuenta'
+      toast.error(errorMessage)
+    } finally {
+      setIsDisconnecting(false)
     }
   }
 
@@ -634,9 +759,168 @@ export default function ProfilePage() {
                 </CardContent>
               )}
             </Card>
+
+            {/* MercadoPago */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <CardTitle className="text-2xl flex items-center gap-2">
+                      <CreditCard size={24} className="text-blue-500" />
+                      Cuenta de MercadoPago
+                    </CardTitle>
+                    <p className="text-gray-500 mt-1 text-sm">
+                      Vincula tu cuenta para recibir/enviar pagos
+                    </p>
+                  </div>
+                  <img 
+                    src="/images/MercadoPagoLogo.png" 
+                    alt="MercadoPago" 
+                    className="h-12 w-auto object-contain shrink-0"
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                {mpLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="animate-spin text-primary-600" size={32} />
+                  </div>
+                ) : mpStatus?.isConnected ? (
+                  // Cuenta conectada
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-4 p-5 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="p-2 bg-green-100 rounded-lg shrink-0">
+                        <CheckCircle2 size={24} className="text-green-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-green-900 mb-1">
+                          Cuenta vinculada
+                        </p>
+                        <p className="text-sm text-green-700 break-all">
+                          <strong>Email:</strong> {mpStatus.email}
+                        </p>
+                        {mpStatus.connectedAt && (
+                          <p className="text-xs text-green-600 mt-1">
+                            Vinculada el {new Date(mpStatus.connectedAt).toLocaleDateString('es-ES', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
+                          </p>
+                        )}
+                        {mpStatus.tokenExpired && (
+                          <div className="mt-3 flex items-center gap-2 text-amber-700">
+                            <AlertTriangle size={16} />
+                            <span className="text-xs">
+                              Tu token ha expirado. Vuelve a vincular tu cuenta.
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="w-full text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400"
+                      onClick={() => setShowDisconnectDialog(true)}
+                    >
+                      <Unlink size={18} className="mr-2" />
+                      Desvincular cuenta
+                    </Button>
+                  </div>
+                ) : (
+                  // Sin cuenta vinculada
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-4 p-5 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="p-2 bg-blue-100 rounded-lg shrink-0">
+                        <CreditCard size={24} className="text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-blue-900 mb-2">
+                          ¿Por qué vincular tu cuenta?
+                        </p>
+                        <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
+                          <li>Recibe pagos de forma segura</li>
+                          <li>Gestiona tus ventas desde MercadoPago</li>
+                          <li>Procesa pagos con tarjeta, transferencia y más</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      className="w-full bg-blue-500 hover:bg-blue-600"
+                      onClick={handleConnectMercadoPago}
+                    >
+                      <Link2 size={18} className="mr-2" />
+                      Vincular cuenta de MercadoPago
+                    </Button>
+
+                    <div className="space-y-2">
+                      <p className="text-xs text-center text-gray-500">
+                        Serás redirigido a MercadoPago para autorizar la conexión de forma segura
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>
+
+      {/* Modal de confirmación para desvincular */}
+      <Dialog open={showDisconnectDialog} onOpenChange={setShowDisconnectDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-3 bg-red-100 rounded-full">
+                <AlertTriangle size={24} className="text-red-600" />
+              </div>
+              <DialogTitle className="text-xl">¿Estás seguro?</DialogTitle>
+            </div>
+            <DialogDescription className="text-base pt-2">
+              Estás a punto de desvincular tu cuenta de MercadoPago.
+              <br />
+              <br />
+              <strong className="text-gray-900">Esto significa que:</strong>
+              <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
+                <li>No podrás recibir/enviar pagos</li>
+                <li>Deberás volver a vincular tu cuenta para activar pagos</li>
+              </ul>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowDisconnectDialog(false)}
+              disabled={isDisconnecting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              className="bg-red-600 hover:bg-red-700"
+              onClick={handleDisconnectMercadoPago}
+              disabled={isDisconnecting}
+            >
+              {isDisconnecting ? (
+                <>
+                  <Loader2 className="animate-spin mr-2" size={18} />
+                  Desvinculando...
+                </>
+              ) : (
+                <>
+                  <Unlink size={18} className="mr-2" />
+                  Sí, desvincular
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

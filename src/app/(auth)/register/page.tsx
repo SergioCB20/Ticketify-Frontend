@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Eye, EyeOff, ArrowRight, ArrowLeft, User, Building } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import type { ApiError } from '@/lib/types'
 
 type UserType = 'ATTENDEE' | 'ORGANIZER' | null
@@ -158,6 +158,21 @@ export default function RegisterPage() {
       setLoading(false)
     }
   }
+
+  const searchParams = useSearchParams();
+  const [showGoogleMessage, setShowGoogleMessage] = useState(false);
+
+  useEffect(() => {
+    const error = searchParams.get('error');
+    if (error === 'not-registered') {
+      // Rellena los campos con los datos de Google
+      setEmail(searchParams.get('email') || '');
+      setFirstName(searchParams.get('firstName') || '');
+      setLastName(searchParams.get('lastName') || '');
+      // Muestra un mensaje amigable
+      setShowGoogleMessage(true);
+    }
+  }, [searchParams]);
 
   return (
     <div className="min-h-screen flex">
