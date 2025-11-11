@@ -1,17 +1,17 @@
-import type { Metadata } from "next";
-import Providers from "../components/providers";
-import "./globals.css";
+import type { Metadata } from "next"
+import "./globals.css"
+import Providers from "../components/providers"
 
 export const metadata: Metadata = {
   title: "Ticketify",
   description: "Sistema de gestión de tickets y eventos",
-};
+}
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: React.ReactNode
+}) {
   return (
     <html lang="es">
       <head>
@@ -23,5 +23,5 @@ export default function RootLayout({
         </Providers>
       </body>
     </html>
-  );
+  )
 }

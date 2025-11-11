@@ -7,6 +7,7 @@ import { PromotionService } from '@/services/api/promotions'
 import { Button } from '@/components/ui/button'
 import { Container } from '@/components/ui/container'
 import { toast } from 'react-hot-toast'
+import { StorageService } from '@/services/storage'
 
 export default function EventDetailPage() {
   const { id } = useParams()
@@ -231,8 +232,35 @@ export default function EventDetailPage() {
                   toast.error('Selecciona al menos un ticket antes de continuar')
                   return
                 }
-                toast.success('Redirigiendo al proceso de compra...')
-                // Aquí luego rediriges a /checkout
+
+                const token = StorageService.getAccessToken()
+                if (!token) {
+                  toast.error('Debes iniciar sesión antes de comprar')
+                  router.push('/login')
+                  return
+                }
+
+                // 🟢 Guardar evento y tickets seleccionados en localStorage
+                localStorage.setItem('selectedEvent', JSON.stringify(event))
+                const selectedTicketsData = event.ticket_types
+                  .filter((t: any) => selectedTickets[t.id] > 0)
+                  .map((t: any) => ({
+                    id: t.id,
+                    name: t.name,
+                    price: getDiscountedPrice(t.price),
+                    quantity: selectedTickets[t.id],
+                    ticket_type_id: t.id,
+                  }))
+                localStorage.setItem('selectedTickets', JSON.stringify(selectedTicketsData))
+
+                if (appliedPromo) {
+                  localStorage.setItem('appliedPromo', JSON.stringify(appliedPromo))
+                } else {
+                  localStorage.removeItem('appliedPromo')
+                }
+
+                // 🚀 Ir al checkout
+                router.push('/events/${id}/checkout')
               }}
             >
               Comprar entradas

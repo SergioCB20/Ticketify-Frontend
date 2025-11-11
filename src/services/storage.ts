@@ -32,7 +32,7 @@ export class StorageService {
     return null
   }
 
-  static removeTokens(): void {
+  static clearTokens(): void {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(TOKEN_KEY)
       localStorage.removeItem(REFRESH_TOKEN_KEY)
@@ -49,13 +49,10 @@ export class StorageService {
   static getUser<T>(): T | null {
     if (typeof window !== 'undefined') {
       const user = localStorage.getItem(USER_KEY)
-      if (!user) return null
-      const parsed = JSON.parse(user)
-      return parsed.user || parsed // 👈 si viene anidado, devuelve el interno
+      return user ? JSON.parse(user) : null
     }
     return null
   }
-
 
   static removeUser(): void {
     if (typeof window !== 'undefined') {
@@ -65,7 +62,7 @@ export class StorageService {
 
   // Clear all
   static clearAll(): void {
-    this.removeTokens()
+    this.clearTokens()
     this.removeUser()
   }
 }
