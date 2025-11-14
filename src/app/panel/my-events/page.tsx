@@ -14,7 +14,7 @@ import { formatDate } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 
 // 1. IMPORTA TU SERVICIO Y LA INTERFAZ CORRECTA
-import { getMyEvents, EventResponse } from '@/services/api/events' // Ajusta la ruta si es necesario
+import { getMyEvents, OrganizerEventResponse } from '@/services/api/events' // Ajusta la ruta si es necesario
 
 // (La interfaz OrganizerEvent ya no es necesaria, usamos EventResponse)
 
@@ -24,22 +24,28 @@ import { getMyEvents, EventResponse } from '@/services/api/events' // Ajusta la 
 export default function OrganizerEventsPage() {
   const [isLoading, setIsLoading] = useState(true);
   // 2. USA LA INTERFAZ CORRECTA
-  const [events, setEvents] = useState<EventResponse[]>([]);
+  const [events, setEvents] = useState<OrganizerEventResponse[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const {user} = useAuth();
 
   // --- Carga de Datos (LA FORMA CORRECTA) ---
   useEffect(() => {
     const fetchOrganizerEvents = async () => {
+      if (!user?.id) {
+        console.log("Usuario no autenticado");
+        setIsLoading(false);
+        return;
+      }
+      
       setIsLoading(true);
       try {
-        // 3. LLAMA A LA FUNCIÓN CORRECTA DE TU API
-        //    api.ts añade el token automáticamente
-        //    events.ts llama a la URL correcta (/events/my-events)
-        const response = await getMyEvents();
+        console.log("Cargando eventos para usuario:", user.id);
+        const events = await getMyEvents(user.id);
         
         // 4. GUARDA LOS EVENTOS
-        setEvents(response.events); 
+        setEvents(events); 
+        console.log("Eventos cargados:", events);
         
       } catch (error) {
         console.error("Error al cargar eventos:", error);
@@ -50,7 +56,7 @@ export default function OrganizerEventsPage() {
     };
 
     fetchOrganizerEvents();
-  }, []);
+  }, [user]);
 
   // (El resto de tu código de filtrado y renderizado va aquí)
   // ...
@@ -63,7 +69,7 @@ export default function OrganizerEventsPage() {
   });
 
   // --- Funciones Auxiliares ---
-  const getStatusBadgeVariant = (status: OrganizerEvent['status']): 'success' | 'default' | 'destructive' | 'warning' => {
+  const getStatusBadgeVariant = (status: OrganizerEventResponse['status']): 'success' | 'default' | 'destructive' | 'warning' => {
     switch (status) {
       case 'PUBLISHED': return 'success';
       case 'DRAFT': return 'warning';
@@ -73,7 +79,7 @@ export default function OrganizerEventsPage() {
     }
   };
 
-  const getStatusBadgeText = (status: OrganizerEvent['status']): string => {
+  const getStatusBadgeText = (status: OrganizerEventResponse['status']): string => {
     switch (status) {
       case 'PUBLISHED': return 'Publicado';
       case 'DRAFT': return 'Borrador';
@@ -172,14 +178,31 @@ export default function OrganizerEventsPage() {
                 >
                   {/* Imagen */}
                   <div className="relative h-48 w-full md:w-56 lg:w-64 md:h-auto flex-shrink-0 bg-gray-100">
-                    {event.imageUrl ? (
-                      <Image src={event.imageUrl} alt={`Imagen de ${event.title}`} fill className="object-cover" sizes="(max-width: 768px) 100vw, 33vw"/>
+                    {event.imageUrl && event.imageUrl.trim() ? (
+                      <img 
+                        src={`http://localhost:8000${event.imageUrl}`}
+                        alt={`Imagen de ${event.title}`} 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          const parent = e.currentTarget.parentElement;
+                          if (parent) {
+                            parent.innerHTML = `
+                              <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                                <svg class="h-16 w-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                              </div>
+                            `;
+                          }
+                        }}
+                      />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
                         <Calendar className="h-16 w-16 text-gray-400" />
                       </div>
                     )}
-                    <Badge variant={getStatusBadgeVariant(event.status)} className="absolute top-3 right-3 shadow text-xs px-2.5 py-1 rounded-full font-semibold">
+                    <Badge variant={getStatusBadgeVariant(event.status)} className="absolute top-3 right-3 shadow text-xs px-2.5 py-1 rounded-full font-semibold z-10">
                       {getStatusBadgeText(event.status)}
                     </Badge>
                   </div>
@@ -197,19 +220,19 @@ export default function OrganizerEventsPage() {
                     <CardContent className="p-0 flex-grow space-y-2 text-sm text-gray-600 mb-4">
                       <div className="flex items-center">
                         <Calendar className="mr-2 h-4 w-4 text-gray-500 flex-shrink-0" />
-                        {formatDate(event.startDate, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
+                        {formatDate(event.date, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
                       </div>
                       <div className="flex items-start">
                         <MapPin className="mr-2 h-4 w-4 text-gray-500 flex-shrink-0 mt-0.5" />
-                        <span className="line-clamp-2">{event.venue}</span>
+                        <span className="line-clamp-2">{event.location}</span>
                       </div>
                       <div className="flex items-center">
                         <Ticket className="mr-2 h-4 w-4 text-gray-500 flex-shrink-0" />
-                        <span className="font-medium text-gray-800">{(event.totalCapacity - event.availableTickets).toLocaleString()}</span>
+                        <span className="font-medium text-gray-800">{event.soldTickets?.toLocaleString() || 0}</span>
                         <span className="mx-1 text-gray-500">/</span>
-                        <span className="text-gray-700">{event.totalCapacity.toLocaleString()} vendidos</span>
+                        <span className="text-gray-700">{event.totalTickets.toLocaleString()} vendidos</span>
                         <span className="ml-2 font-semibold text-gray-900">
-                          ({event.totalCapacity > 0 ? (((event.totalCapacity - event.availableTickets) / event.totalCapacity) * 100).toFixed(0) : 0}%)
+                          ({event.totalTickets > 0 ? ((event.soldTickets / event.totalTickets) * 100).toFixed(0) : 0}%)
                         </span>
                       </div>
                     </CardContent>

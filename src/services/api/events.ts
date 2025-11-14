@@ -1,3 +1,4 @@
+import { AxiosResponse } from 'axios'
 import api, { handleApiError } from '../../lib/api'
 
 // Types
@@ -8,7 +9,6 @@ export interface EventCreateData {
   endDate: string
   venue: string
   totalCapacity: number
-  multimedia?: string[]
   category_id?: string
 }
 
@@ -19,7 +19,6 @@ export interface EventUpdateData {
   endDate?: string
   venue?: string
   totalCapacity?: number
-  multimedia?: string[]
   category_id?: string
 }
 
@@ -32,13 +31,24 @@ export interface EventResponse {
   venue: string
   totalCapacity: number
   status: 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED'
-  multimedia: string[]
+  photoUrl?: string
   availableTickets: number
   isSoldOut: boolean
   organizerId: string
   categoryId?: string
   createdAt: string
   updatedAt: string
+}
+
+export interface OrganizerEventResponse {
+  id: string
+  title: string
+  date: string
+  location: string
+  totalTickets: number
+  soldTickets: number
+  status: 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED'
+  imageUrl?: string
 }
 
 export interface EventListResponse {
@@ -162,11 +172,10 @@ export const getFeaturedEvents = async (limit = 6): Promise<EventResponse[]> => 
 /**
  * Get my events (requires authentication)
  */
-export const getMyEvents = async (page = 1, pageSize = 10): Promise<EventListResponse> => {
+export const getMyEvents = async (organizerId: string): Promise<OrganizerEventResponse[]> => {
   try {
-    const response = await api.get<EventListResponse>('/events/my-events', {
-      params: { page, page_size: pageSize }
-    })
+    const response = await api.get<OrganizerEventResponse[]>(`/events/organizer/${organizerId}`)
+    console.log("Eventos del organizador obtenidos:", response.data);
     return response.data
   } catch (error) {
     throw handleApiError(error)
@@ -234,4 +243,23 @@ export const publishEvent = async (eventId: string): Promise<EventResponse> => {
  */
 export const cancelEvent = async (eventId: string): Promise<EventResponse> => {
   return updateEventStatus(eventId, 'CANCELLED')
+}
+
+/**
+ * Upload event photo
+ */
+export const uploadEventPhoto = async (eventId: string, photoFile: File): Promise<EventResponse> => {
+  try {
+    const formData = new FormData()
+    formData.append('photo', photoFile)
+    
+    const response = await api.post<EventResponse>(`/events/${eventId}/upload-photo`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+    return response.data
+  } catch (error) {
+    throw handleApiError(error)
+  }
 }

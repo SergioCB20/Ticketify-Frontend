@@ -9,7 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { TicketTypeManager } from '@/components/events/ticket-type-manager'
-import { createEventWithTicketTypes } from '@/services/api/events'
+import { createEventWithTicketTypes, uploadEventPhoto } from '@/services/api/events'
 import { getCategories } from '@/services/api/categories'
 import type { Category } from '@/lib/types/event'
 import type { TicketTypeFormData } from '@/lib/types/ticketType'
@@ -330,12 +330,6 @@ export default function CrearEventoPage() {
     setError(null)
 
     try {
-      // Preparar multimedia (filtrar URLs vacías)
-      const multimediaUrls = [
-        formData.imagenPrincipal,
-        ...formData.multimedia.filter(url => url.trim())
-      ].filter(url => url.trim())
-
       const eventWithTicketTypes = {
         event: {
           title: formData.nombre.trim(),
@@ -344,7 +338,6 @@ export default function CrearEventoPage() {
           endDate: new Date(formData.fechaFin).toISOString(),
           venue: formData.ubicacion.trim(),
           totalCapacity: parseInt(formData.capacidad),
-          multimedia: multimediaUrls,
           category_id: formData.categoria || undefined
         },
         ticketTypes: ticketTypes.map(tt => ({
@@ -358,7 +351,17 @@ export default function CrearEventoPage() {
         }))
       }
 
-      await createEventWithTicketTypes(eventWithTicketTypes)
+      const result = await createEventWithTicketTypes(eventWithTicketTypes)
+      
+      // Si hay imagen principal, subirla
+      if (imagenPrincipalFile) {
+        try {
+          await uploadEventPhoto(result.event.id, imagenPrincipalFile)
+        } catch (photoError) {
+          console.error('Error al subir la foto:', photoError)
+          // No fallar si la foto no se sube, el evento ya fue creado
+        }
+      }
       
       setSuccess(true)
       
