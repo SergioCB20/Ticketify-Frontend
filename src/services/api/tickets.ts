@@ -4,15 +4,22 @@ import type { Ticket as MyTicket } from '@/lib/types'
 /** ---------- Tipos que usa la vista paginada ---------- */
 export type TicketListItem = {
   id: string
-  code?: string              // code | qr_code | qrCode
+  code?: string
+  price?: number
   status: string
   purchase_date: string
+  isListed: boolean
+  listingId?: string | null
   event: {
     id: string
     title: string
     start_date: string
     venue: string
     cover_image?: string | null
+  }
+  ticketType?: {
+    id: string
+    name: string
   }
 }
 
@@ -35,8 +42,11 @@ function isPagedResponse(data: any): data is TicketListResponse {
 const toListItem = (t: any): TicketListItem => ({
   id: String(t.id),
   code: t.code ?? t.qr_code ?? t.qrCode ?? undefined,
+  price: t.price ?? 0,
   status: t.status,
   purchase_date: t.purchase_date ?? t.purchaseDate ?? '',
+  isListed: t.isListed ?? false,
+  listingId: t.listingId ?? null,
   event: {
     id: String(t.event?.id ?? ''),
     title: t.event?.title ?? '',
@@ -44,25 +54,28 @@ const toListItem = (t: any): TicketListItem => ({
     venue: t.event?.venue ?? '',
     cover_image: t.event?.cover_image ?? t.event?.coverImage ?? null,
   },
+  ticketType: t.ticketType ? {
+    id: String(t.ticketType.id),
+    name: t.ticketType.name ?? ''
+  } : undefined,
 })
 
 const toMyTicket = (i: TicketListItem): MyTicket => ({
-  // Mapea al shape que usa main (ajusta si tu MyTicket tiene más campos)
   id: i.id,
-  price: undefined as any,
+  price: i.price ?? 0,
   purchaseDate: i.purchase_date,
   status: i.status as any,
-  isValid: true as any,
+  isValid: true,
   qrCode: i.code,
+  isListed: i.isListed,
+  listingId: i.listingId ?? undefined,
   event: {
     id: i.event.id,
     title: i.event.title,
-    startDate: i.event.start_date as any,
+    startDate: i.event.start_date,
     venue: i.event.venue,
-  } as any,
-  ticketType: undefined as any,
-  isListed: false as any,
-  listingId: null as any,
+  },
+  ticketType: i.ticketType ?? { id: '', name: '' },
 })
 
 /** ---------- API (paginado) usado por tu página /panel/my-tickets ---------- */
@@ -139,12 +152,11 @@ export class TicketsService {
   static async getMyTickets(): Promise<MyTicket[]> {
     try {
       const { data } = await api.get(`${BASE_URL}/my-tickets`)
-      if (isArrayResponse(data)) return data
-      if (isPagedResponse(data)) return data.items.map(toMyTicket)
+      if (isArrayResponse(data)) return data.map(toListItem).map(toMyTicket)
+      if (isPagedResponse(data)) return data.items.map(toListItem).map(toMyTicket)
       return []
     } catch (error) {
       throw handleApiError(error)
     }
   }
 }
-
