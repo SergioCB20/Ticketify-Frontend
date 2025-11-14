@@ -21,9 +21,43 @@ export * from './ticket'
 
 // Tipos de marketplace
 export * from './marketplace'
+// Tipos de tipos de entrada (ticket types)
+export * from './ticketType'
 
+// Tipos de respuesta de la API
+export interface ApiResponse<T = any> {
+  success: boolean
+  data: T
+  message?: string
+  errors?: Record<string, string[]>
+}
 // Tipos de promociones
 export * from './promotion'
 
 // Tipos de API y respuestas comunes
 export * from './api'
+
+// Tipos de compras y pagos
+export * from './purchase'
+
+// Tipo específico para "Mis Tickets" (extendido)
+export interface MyTicket {
+  id: string
+  price: number
+  purchaseDate: string
+  status: 'ACTIVE' | 'USED' | 'CANCELLED' | 'EXPIRED' | 'TRANSFERRED'
+  isValid: boolean
+  isListed: boolean
+  listingId?: string
+  qrCode?: string
+  event: {
+    id: string
+    title: string
+    startDate: string
+    venue: string
+  }
+  ticketType: {
+    id: string
+    name: string
+  }
+}
