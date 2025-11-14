@@ -34,7 +34,7 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, className }) => {
     event.multimedia?.[0] ||
     'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&q=80'
 
-  // ✅ Nueva función: redirigir al checkout simulado
+  // ✅ Redirigir al checkout del marketplace
   const handleRedirectToCheckout = () => {
     if (!isAuthenticated) {
       toast.error('Debes iniciar sesión para comprar')
@@ -52,10 +52,10 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, className }) => {
       return
     }
 
-    // Redirigir al formulario de pago simulado
+    // Redirigir al checkout con parámetros del marketplace
     router.push(
-  `/checkout?eventId=${event.id}&ticketTypeId=${listing.ticket_type_id}&price=${price}&eventName=${encodeURIComponent(event.title)}`
-)
+      `/marketplace/checkout?listingId=${listing.id}&price=${price}&eventName=${encodeURIComponent(event.title)}&eventId=${event.id}`
+    )
   }
 
   return (
@@ -139,12 +139,12 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, className }) => {
           )}
         </div>
 
-        {/* ✅ Botón actualizado */}
+        {/* ✅ Botón que redirige al checkout del marketplace */}
         <Button
           variant="primary"
           size="md"
           className="group"
-          onClick={handleRedirectToCheckout}
+          onClick={handleRedirectToMarketplaceCheckout}
           loading={loading}
         >
           Comprar
