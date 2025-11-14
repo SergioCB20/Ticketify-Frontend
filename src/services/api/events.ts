@@ -211,14 +211,18 @@ export const EventService = {
       throw handleApiError(error)
     }
   },
+
   // =======================
   // DELETE EVENT
   // =======================
-    async deleteEvent(eventId: string) {
-      // 👇 SIN handleApiError, dejamos que axios lance el error tal cual
-      const response = await api.delete(`/events/${eventId}`)
-      return response.data
-    },
+  async deleteEvent(eventId: string) {
+    try {
+      const { data } = await api.delete(`/events/${eventId}`)
+      return data
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  },
 
   // =======================
   // EXTRAS OPCIONALES DEL MAIN
