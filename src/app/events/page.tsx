@@ -36,7 +36,7 @@ export default function EventsPage() {
         if (searchParams.get('venue')) filters.venue = searchParams.get('venue')
         filters.status = 'PUBLISHED'
 
-        const response = await EventService.searchEvents(filters, 1, 20)
+        const response = await EventService.search(filters, 1, 20)
         data = Array.isArray(response) ? response : response.events || []
       } else {
         // 🟢 Si no hay filtros, usa directamente los eventos activos

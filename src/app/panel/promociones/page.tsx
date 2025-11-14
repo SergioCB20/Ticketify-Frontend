@@ -146,7 +146,6 @@ export default function PromotionsPage() {
 
   return (
     <>
-      <Navbar />
       <div className="p-10 min-h-screen bg-gray-50">
         <h1 className="text-4xl font-extrabold text-gray-900 mb-8">
           🎟️ Promociones por Evento

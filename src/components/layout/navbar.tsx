@@ -163,13 +163,6 @@ const Navbar: React.FC<NavbarProps> = ({
                   Mi perfil
                 </DropdownItem>
 
-                <DropdownItem
-                  icon={<Ticket className="w-4 h-4" />}
-                  onClick={() => router.push('/panel/my-tickets')}
-                >
-                  Mis tickets
-                </DropdownItem>
-
                 <DropdownDivider />
 
                 <DropdownItem

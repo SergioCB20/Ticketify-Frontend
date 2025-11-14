@@ -1,6 +1,8 @@
 import api, { handleApiError } from '../../lib/api'
 
-// 🔹 Tipos base
+// ============================================================
+// Tipos base
+// ============================================================
 export interface EventCreateData {
   title: string
   description?: string
@@ -23,6 +25,7 @@ export interface EventUpdateData {
   category_id?: string
 }
 
+// Respuesta del backend original
 export interface EventResponse {
   id: string
   title: string
@@ -39,124 +42,122 @@ export interface EventResponse {
   categoryId?: string
   createdAt: string
   updatedAt: string
-  // ✅ campos adicionales
   minPrice?: number
   maxPrice?: number
   ticket_types?: any[]
 }
 
-export interface EventListResponse {
-  events: EventResponse[]
-  total: number
-  page: number
-  pageSize: number
-  totalPages: number
+// Respuesta optimizada para /my-events
+export interface OrganizerEventResponse {
+  id: string
+  title: string
+  date: string
+  location: string
+  totalTickets: number
+  soldTickets: number
+  status: 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED'
+  imageUrl?: string
 }
 
-export interface EventFilters {
-  page?: number
-  page_size?: number
-  status?: string
-  category_id?: string
-  organizer_id?: string
-  search?: string
-  start_date_from?: string
-  start_date_to?: string
+export interface EventWithTicketTypesData {
+  event: EventCreateData
+  ticketTypes: Array<{
+    name: string
+    description?: string
+    price: number
+    quantity: number
+    maxPerPurchase?: number
+    salesStartDate?: string
+    salesEndDate?: string
+  }>
 }
 
-/* ============================================================
- 🧩 Implementación estilo "Service" con funciones agrupadas
-============================================================ */
-
-
+// ============================================================
+// EVENT SERVICE COMPLETO → 100% compatible con tu frontend actual
+// ============================================================
 export const EventService = {
-  // ✅ Crear un evento
-  async create(eventData: any) {
+  // Crear evento simple
+  async createEvent(eventData: EventCreateData) {
     try {
-      const response = await api.post('/events/', eventData)
-      return response.data
+      const { data } = await api.post('/events/', eventData)
+      return data
     } catch (error) {
       throw handleApiError(error)
     }
   },
 
-  // ✅ Crear evento con tipos de ticket
-  async createWithTicketTypes(data: any) {
+  // Crear evento + ticket types
+  async createEventWithTicketTypes(data: EventWithTicketTypesData) {
     try {
-      const event = await this.create(data.event)
-      const response = await api.post('/ticket-types/batch', {
+      // Crear el evento
+      const event = await EventService.createEvent(data.event)
+      
+      // Crear los tipos de entrada en batch
+      const response = await api.post<any[]>('/ticket-types/batch', {
         eventId: event.id,
         ticketTypes: data.ticketTypes
       })
+
       return { event, ticketTypes: response.data }
     } catch (error) {
       throw handleApiError(error)
     }
   },
 
-  // ✅ Obtener todos los eventos activos (publicados)
-  async getActiveEvents(page = 1, pageSize = 10) {
-    try {
-      const response = await api.get('/events/', {
-        params: { status: 'PUBLISHED', page, page_size: pageSize }
-      })
-      return response.data
-    } catch (error) {
-      throw handleApiError(error)
-    }
-  },
+  // =======================
+  // GETTERS
+  // =======================
 
-  // ✅ Obtener eventos próximos
-  async getUpcoming(page = 1, pageSize = 10) {
-    try {
-      const response = await api.get('/events/upcoming', {
-        params: { page, page_size: pageSize }
-      })
-      return response.data
-    } catch (error) {
-      throw handleApiError(error)
-    }
-  },
-
-  // ✅ Obtener eventos destacados
-  async getFeatured(limit = 6) {
-    try {
-      const response = await api.get('/events/featured', {
-        params: { limit }
-      })
-      return response.data
-    } catch (error) {
-      throw handleApiError(error)
-    }
-  },
-
-  // ✅ Buscar eventos
-  async search(searchTerm: string, page = 1, pageSize = 10) {
-    try {
-      const response = await api.get('/events/search', {
-        params: { q: searchTerm, page, page_size: pageSize }
-      })
-      return response.data
-    } catch (error) {
-      throw handleApiError(error)
-    }
-  },
-
-  // ✅ Obtener evento por ID
+  // Obtener detalle por ID
   async getEventById(eventId: string) {
     try {
-      const response = await api.get(`/events/${eventId}`)
+      const { data } = await api.get(`/events/${eventId}`)
+      return data
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  },
+
+  // Mis eventos (OrganizerEventResponse[])
+  async getMyEvents() {
+    try {
+      const { data } = await api.get('/events/my-events')
+      return data
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  },
+
+  // =======================
+  // UPDATE EVENT
+  // =======================
+  async updateEvent(eventId: string, eventData: EventUpdateData) {
+    try {
+      const { data } = await api.put(`/events/${eventId}`, eventData)
+      return data
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  },
+
+  async updateEventStatus(eventId: string, status: string): Promise<EventResponse> {
+    try {
+      const response = await api.patch<EventResponse>(`/events/${eventId}/status`, { status })
       return response.data
     } catch (error) {
       throw handleApiError(error)
     }
   },
 
-  // ✅ Obtener eventos del usuario autenticado
-  async getMyEvents(page = 1, pageSize = 10) {
+  async uploadEventPhoto (eventId: string, photoFile: File): Promise<EventResponse> {
     try {
-      const response = await api.get('/events/my-events', {
-        params: { page, page_size: pageSize }
+      const formData = new FormData()
+      formData.append('photo', photoFile)
+      
+      const response = await api.post<EventResponse>(`/events/${eventId}/upload-photo`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        }
       })
       return response.data
     } catch (error) {
@@ -164,42 +165,108 @@ export const EventService = {
     }
   },
 
-  // ✅ Actualizar un evento
-  async update(eventId: string, eventData: any) {
+  // =======================
+  // STATUS MANAGEMENT
+  // =======================
+  async publishEvent(eventId: string) {
     try {
-      const response = await api.put(`/events/${eventId}`, eventData)
-      return response.data
+      const { data } = await api.patch(`/events/${eventId}/status`, {
+        status: 'PUBLISHED'
+      })
+      return data
     } catch (error) {
       throw handleApiError(error)
     }
   },
 
-  // ✅ Cambiar estado del evento
-  async updateStatus(eventId: string, status: string) {
+  async cancelEvent(eventId: string) {
     try {
-      const response = await api.patch(`/events/${eventId}/status`, { status })
-      return response.data
+      const { data } = await api.patch(`/events/${eventId}/status`, {
+        status: 'CANCELLED'
+      })
+      return data
     } catch (error) {
       throw handleApiError(error)
     }
   },
 
-  // ✅ Publicar evento
-  async publish(eventId: string) {
-    return this.updateStatus(eventId, 'PUBLISHED')
-  },
-
-  // ✅ Cancelar evento
-  async cancel(eventId: string) {
-    return this.updateStatus(eventId, 'CANCELLED')
-  },
-
-  // ✅ Eliminar evento
-  async delete(eventId: string) {
+  async markEventAsDraft(eventId: string) {
     try {
-      await api.delete(`/events/${eventId}`)
+      const { data } = await api.patch(`/events/${eventId}/status`, {
+        status: 'DRAFT'
+      })
+      return data
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  },
+
+  async completeEvent(eventId: string) {
+    try {
+      const { data } = await api.patch(`/events/${eventId}/status`, {
+        status: 'COMPLETED'
+      })
+      return data
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  },
+
+  // =======================
+  // DELETE EVENT
+  // =======================
+  async deleteEvent(eventId: string) {
+    try {
+      const { data } = await api.delete(`/events/${eventId}`)
+      return data
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  },
+
+  // =======================
+  // EXTRAS OPCIONALES DEL MAIN
+  // =======================
+  async getActiveEvents(page = 1, pageSize = 10) {
+    try {
+      const { data } = await api.get('/events/', {
+        params: { status: 'PUBLISHED', page, page_size: pageSize }
+      })
+      return data
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  },
+
+  async getFeatured(limit = 6) {
+    try {
+      const { data } = await api.get('/events/featured', {
+        params: { limit }
+      })
+      return data
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  },
+
+  async search(searchTerm: string, page = 1, pageSize = 10) {
+    try {
+      const { data } = await api.get('/events/search', {
+        params: { q: searchTerm, page, page_size: pageSize }
+      })
+      return data
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  },
+
+  async getAllByUser(userId: string) {
+    try {
+      const response = await api.get(`/events/by-organizer/${userId}`)
+      return response.data
     } catch (error) {
       throw handleApiError(error)
     }
   }
+
 }
