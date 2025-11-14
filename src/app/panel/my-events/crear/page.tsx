@@ -110,13 +110,9 @@ export default function CrearEventoPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [currentStep, setCurrentStep] = useState(1)
   
-  // Refs para inputs de archivo
-  const multimediaInputRef = React.useRef<HTMLInputElement>(null)
-  
   // Estados para archivos
   const [imagenPrincipalFile, setImagenPrincipalFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string>('')
-  const [multimediaFiles, setMultimediaFiles] = useState<File[]>([])
   
   const [formData, setFormData] = useState({
     nombre: '',
@@ -126,8 +122,7 @@ export default function CrearEventoPage() {
     capacidad: '',
     fechaInicio: '',
     fechaFin: '',
-    imagenPrincipal: '',
-    multimedia: [] as string[]
+    imagenPrincipal: ''
   })
 
   const [ticketTypes, setTicketTypes] = useState<TicketTypeFormData[]>([])
@@ -152,29 +147,7 @@ export default function CrearEventoPage() {
     }
   }
 
-  // Manejo de archivos multimedia
-  const handleMultimediaFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (files && files.length > 0) {
-      const newFiles = Array.from(files)
-      setMultimediaFiles(prev => [...prev, ...newFiles])
-      
-      // Simular URLs para cada archivo
-      const newUrls = newFiles.map(file => `url-de-${file.name}`)
-      handleInputChange('multimedia', [...formData.multimedia, ...newUrls])
-    }
-    
-    // Resetear el input para permitir seleccionar los mismos archivos nuevamente
-    if (multimediaInputRef.current) {
-      multimediaInputRef.current.value = ''
-    }
-  }
 
-  // Eliminar archivo multimedia
-  const handleRemoveMultimediaFile = (index: number) => {
-    setMultimediaFiles(prev => prev.filter((_, i) => i !== index))
-    handleInputChange('multimedia', formData.multimedia.filter((_, i) => i !== index))
-  }
 
   // Limpiar URLs cuando el componente se desmonte
   React.useEffect(() => {
@@ -533,14 +506,12 @@ export default function CrearEventoPage() {
                   />
                 </div>
 
-                {/* Sección de Multimedia */}
+                {/* Sección de Imagen Principal */}
                 <div className="md:col-span-2 mt-6">
                   <div className="border-t pt-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Contenido Visual</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Imagen del Evento</h3>
           
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
-                      {/* --- Imagen Principal (Carga de Archivo) --- */}
+                    <div className="max-w-md">
                       <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-white hover:border-primary-400 transition-colors">
                         <label className="mb-2 block text-sm font-semibold text-gray-800">
                           📸 Imagen Principal
@@ -592,82 +563,6 @@ export default function CrearEventoPage() {
                           </div>
                         )}
                       </div>
-
-                      {/* --- Contenido Multimedia (Carga Múltiple) --- */}
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-white hover:border-primary-400 transition-colors">
-                        <label className="mb-2 block text-sm font-semibold text-gray-800">
-                          🎬 Contenido Multimedia
-                        </label>
-                        
-                        {/* Input de archivo oculto */}
-                        <Input
-                          type="file"
-                          multiple
-                          accept="image/*,video/*,.gif"
-                          ref={multimediaInputRef}
-                          onChange={handleMultimediaFileChange}
-                          disabled={loading}
-                          className="hidden"
-                        />
-                        
-                        {/* Botón que activa el input oculto */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => multimediaInputRef.current?.click()}
-                          disabled={loading}
-                          type="button"
-                          className="w-full mb-2"
-                        >
-                          + Agregar Archivos
-                        </Button>
-                        
-                        <p className="text-xs text-gray-500 mb-3">
-                          🎥 Videos, GIFs o imágenes adicionales del evento
-                        </p>
-                        
-                        {/* Lista de archivos seleccionados */}
-                        <div className="space-y-2 max-h-48 overflow-y-auto">
-                          {multimediaFiles.length > 0 ? (
-                            multimediaFiles.map((file, index) => (
-                              <div key={index} className="flex gap-2 items-center justify-between p-2 pl-3 border rounded-md bg-gray-50 hover:bg-gray-100 transition-colors">
-                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <span className="text-lg flex-shrink-0">
-                                    {file.type.startsWith('image/') ? '🖼️' : file.type.startsWith('video/') ? '🎬' : '📁'}
-                                  </span>
-                                  <span className="text-sm text-gray-700 truncate" title={file.name}>
-                                    {file.name}
-                                  </span>
-                                  <span className="text-xs text-gray-500 flex-shrink-0">
-                                    ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                                  </span>
-                                </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleRemoveMultimediaFile(index)}
-                                  disabled={loading}
-                                  type="button"
-                                  className="text-red-500 hover:text-red-700 hover:bg-red-50 px-2 flex-shrink-0"
-                                >
-                                  ✕
-                                </Button>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="flex items-center justify-center h-48 bg-gray-50 rounded-lg border border-gray-200">
-                              <div className="text-center text-gray-400">
-                                <svg className="mx-auto h-12 w-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
-                                <p className="text-sm">No hay archivos multimedia</p>
-                                <p className="text-xs mt-1">Haz clic en "Agregar Archivos"</p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
                     </div>
                   </div>
                 </div>
