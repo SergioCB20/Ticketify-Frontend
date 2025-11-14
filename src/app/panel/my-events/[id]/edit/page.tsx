@@ -350,50 +350,101 @@ export default function EditEventPage() {
               </p>
             </div>
 
-            {/* Multimedia */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                <ImageIcon className="w-4 h-4" />
-                Imágenes del evento
-              </label>
+            {/* Sección de Multimedia */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Contenido Visual</h3>
               
-              <div className="flex gap-2 mb-3">
-                <Input
-                  type="url"
-                  value={newImageUrl}
-                  onChange={(e) => setNewImageUrl(e.target.value)}
-                  placeholder="https://ejemplo.com/imagen.jpg"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={addImage}
-                >
-                  Agregar
-                </Button>
-              </div>
-
-              {/* Lista de imágenes */}
-              {formData.multimedia && formData.multimedia.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {formData.multimedia.map((url, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={url}
-                        alt={`Imagen ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-lg"
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Imagen Principal */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4" />
+                    Imagen Principal (URL)
+                  </label>
+                  <Input
+                    type="url"
+                    value={formData.multimedia?.[0] || ''}
+                    onChange={(e) => {
+                      const newMultimedia = [...(formData.multimedia || [])]
+                      if (e.target.value) {
+                        newMultimedia[0] = e.target.value
+                      } else {
+                        newMultimedia.shift()
+                      }
+                      setFormData({ ...formData, multimedia: newMultimedia })
+                    }}
+                    placeholder="https://ejemplo.com/imagen.jpg"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    💡 Imagen destacada que se mostrará en la portada del evento
+                  </p>
+                  {formData.multimedia?.[0] && (
+                    <div className="mt-3 border rounded-lg p-2 bg-gray-50">
+                      <img 
+                        src={formData.multimedia[0]} 
+                        alt="Vista previa" 
+                        className="w-full h-40 object-cover rounded"
+                        onError={(e) => {
+                          e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Error+al+cargar+imagen'
+                        }}
                       />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
                     </div>
-                  ))}
+                  )}
                 </div>
-              )}
+
+                {/* Contenido Multimedia */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4" />
+                    Contenido Multimedia (URLs)
+                  </label>
+                  
+                  <div className="space-y-2">
+                    {(formData.multimedia || []).slice(1).map((url, index) => (
+                      <div key={index + 1} className="flex gap-2">
+                        <Input
+                          type="url"
+                          value={url}
+                          onChange={(e) => {
+                            const newMultimedia = [...(formData.multimedia || [])]
+                            newMultimedia[index + 1] = e.target.value
+                            setFormData({ ...formData, multimedia: newMultimedia })
+                          }}
+                          placeholder="https://ejemplo.com/video.mp4 o .gif"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeImage(index + 1)}
+                        >
+                          ✕
+                        </Button>
+                      </div>
+                    ))}
+                    
+                    <div className="flex gap-2">
+                      <Input
+                        type="url"
+                        value={newImageUrl}
+                        onChange={(e) => setNewImageUrl(e.target.value)}
+                        placeholder="https://ejemplo.com/video.mp4 o .gif"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addImage}
+                      >
+                        + Agregar
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    🎬 Videos, GIFs o imágenes adicionales del evento
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 

@@ -35,7 +35,8 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
 
   if (!isAuthenticated) return null;
 
-  const isOrganizer = user?.roles?.includes('Organizer');
+  // Verificar si el usuario es organizador
+  const isOrganizer = user?.roles?.includes('ORGANIZER')
 
   const navigation = isOrganizer
     ? [

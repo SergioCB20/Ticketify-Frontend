@@ -1,225 +1,265 @@
+import { AxiosResponse } from 'axios'
 import api, { handleApiError } from '../../lib/api'
-import type {
-  Event,
-  EventDetail,
-  EventCreate,
-  EventUpdate,
-  PaginatedEvents,
-  EventStatus,
-} from '../../lib/types'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
+// Types
+export interface EventCreateData {
+  title: string
+  description?: string
+  startDate: string
+  endDate: string
+  venue: string
+  totalCapacity: number
+  category_id?: string
+}
 
-/**
- * Define los filtros de búsqueda para el endpoint unificado GET /events/
- * Combina los filtros de v1 (search) y v2 (getEvents).
- */
-export interface EventSearchFilters {
-  query?: string
-  categories?: string // Comma-separated slugs (como en v1)
-  min_price?: number
-  max_price?: number
-  start_date?: string | Date
-  end_date?: string | Date
-  location?: string
+export interface EventUpdateData {
+  title?: string
+  description?: string
+  startDate?: string
+  endDate?: string
   venue?: string
-  status?: EventStatus
+  totalCapacity?: number
+  category_id?: string
+}
+
+export interface EventResponse {
+  id: string
+  title: string
+  description?: string
+  startDate: string
+  endDate: string
+  venue: string
+  totalCapacity: number
+  status: 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED'
+  photoUrl?: string
+  availableTickets: number
+  isSoldOut: boolean
+  organizerId: string
+  categoryId?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface OrganizerEventResponse {
+  id: string
+  title: string
+  date: string
+  location: string
+  totalTickets: number
+  soldTickets: number
+  status: 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED'
+  imageUrl?: string
+}
+
+export interface EventListResponse {
+  events: EventResponse[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
+export interface EventFilters {
+  page?: number
+  page_size?: number
+  status?: string
+  category_id?: string
   organizer_id?: string
+  search?: string
+  start_date_from?: string
+  start_date_to?: string
 }
 
-
-// Helper function to get auth headers
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('ticketify_access_token')
-  console.log(token)
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` })
-  }
+export interface EventWithTicketTypesData {
+  event: EventCreateData
+  ticketTypes: Array<{
+    name: string
+    description?: string
+    price: number
+    quantity: number
+    maxPerPurchase?: number
+    salesStartDate?: string
+    salesEndDate?: string
+  }>
 }
-
-// API Functions
 
 /**
  * Create a new event
  */
-export const createEvent = async (eventData: EventCreate): Promise<Event> => {
-  const response = await fetch(`${API_URL}/events/`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(eventData)
-  })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || 'Error al crear el evento')
+export const createEvent = async (eventData: EventCreateData): Promise<EventResponse> => {
+  try {
+    const response = await api.post<EventResponse>('/events/', eventData)
+    return response.data
+  } catch (error) {
+    throw handleApiError(error)
   }
-
-  return response.json()
 }
 
-export class EventService {
+/**
+ * Create event with ticket types
+ */
+export const createEventWithTicketTypes = async (
+  data: EventWithTicketTypesData
+): Promise<{ event: EventResponse; ticketTypes: any[] }> => {
+  try {
+    // Crear el evento
+    const event = await createEvent(data.event)
     
-  static async getAllByUser(userId: string) {
-    const res = await api.get(`/events/organizer/${userId}`)
-    return res.data
+    // Crear los tipos de entrada en batch
+    const response = await api.post<any[]>('/ticket-types/batch', {
+      eventId: event.id,
+      ticketTypes: data.ticketTypes
+    })
+
+    return { event, ticketTypes: response.data }
+  } catch (error) {
+    throw handleApiError(error)
   }
+}
 
-   static async getPromotions(eventId: string) {
-    const res = await api.get(`/promotions/events/${eventId}`)
-    return res.data
+/**
+ * Get list of events with filters
+ */
+export const getEvents = async (filters?: EventFilters): Promise<EventListResponse> => {
+  try {
+    const response = await api.get<EventListResponse>('/events/', { params: filters })
+    return response.data
+  } catch (error) {
+    throw handleApiError(error)
   }
-   static async createPromotion(data: any) {
-    const res = await api.post('/promotions', data)
-    return res.data
-  } 
-  static async updatePromotion(id: string, data: any) {
-    const res = await api.put(`/promotions/${id}`, data)
-    return res.data
+}
+
+/**
+ * Get event by ID
+ */
+export const getEventById = async (eventId: string): Promise<EventResponse> => {
+  try {
+    const response = await api.get<EventResponse>(`/events/${eventId}`)
+    return response.data
+  } catch (error) {
+    throw handleApiError(error)
   }
-  static async deletePromotion(id: string) {
-    const res = await api.delete(`/promotions/${id}`)
-    return res.data
+}
+
+/**
+ * Get upcoming events
+ */
+export const getUpcomingEvents = async (page = 1, pageSize = 10): Promise<EventListResponse> => {
+  try {
+    const response = await api.get<EventListResponse>('/events/upcoming', {
+      params: { page, page_size: pageSize }
+    })
+    return response.data
+  } catch (error) {
+    throw handleApiError(error)
   }
+}
 
-  // ============= OBTENER / BUSCAR EVENTOS (MÉTODO UNIFICADO) =============
-
-  /**
-   * Busca y filtra eventos con paginación.
-   * Este método unificado reemplaza a getEvents y searchEvents de ambas versiones.
-   * Coincide con el endpoint unificado GET /events/ del backend.
-   */
-  static async searchEvents(
-    filters: EventSearchFilters = {},
-    page: number = 1,
-    pageSize: number = 10
-  ): Promise<PaginatedEvents> {
-    try {
-      // Construye los parámetros de consulta dinámicamente
-      const params: any = {
-        page: page,
-        page_size: pageSize,
-        ...filters,
-      }
-
-      // Limpia claves con valores nulos o indefinidos
-      Object.keys(params).forEach(
-        (key) => (params[key] == null || params[key] === '') && delete params[key]
-      )
-
-      // Convierte fechas a string ISO si es necesario
-      if (params.start_date instanceof Date) {
-        params.start_date = params.start_date.toISOString()
-      }
-      if (params.end_date instanceof Date) {
-        params.end_date = params.end_date.toISOString()
-      }
-
-      const response = await api.get<PaginatedEvents>('/events/', { params })
-      return response.data
-    } catch (error) {
-      throw handleApiError(error)
-    }
+/**
+ * Get featured events
+ */
+export const getFeaturedEvents = async (limit = 6): Promise<EventResponse[]> => {
+  try {
+    const response = await api.get<EventResponse[]>('/events/featured', {
+      params: { limit }
+    })
+    return response.data
+  } catch (error) {
+    throw handleApiError(error)
   }
+}
 
-  // ============= OBTENER EVENTO POR ID =============
-
-  static async getEventById(eventId: string): Promise<EventDetail> {
-    try {
-      const response = await api.get<EventDetail>(`/events/${eventId}`)
-      return response.data
-    } catch (error) {
-      throw handleApiError(error)
-    }
+/**
+ * Get my events (requires authentication)
+ */
+export const getMyEvents = async (organizerId: string): Promise<OrganizerEventResponse[]> => {
+  try {
+    const response = await api.get<OrganizerEventResponse[]>(`/events/organizer/${organizerId}`)
+    console.log("Eventos del organizador obtenidos:", response.data);
+    return response.data
+  } catch (error) {
+    throw handleApiError(error)
   }
+}
 
-  // ============= OBTENER EVENTOS POR ORGANIZADOR =============
-
-  /**
-   * Wrapper conveniente que usa searchEvents para filtrar por organizador.
-   */
-  static async getEventsByOrganizer(
-    organizerId: string,
-    page: number = 1,
-    pageSize: number = 10
-  ): Promise<PaginatedEvents> {
-    return this.searchEvents(
-      { organizer_id: organizerId, status: undefined }, // Incluir borradores, etc.
-      page,
-      pageSize
-    )
+/**
+ * Search events
+ */
+export const searchEvents = async (searchTerm: string, page = 1, pageSize = 10): Promise<EventListResponse> => {
+  try {
+    const response = await api.get<EventListResponse>('/events/search', {
+      params: { q: searchTerm, page, page_size: pageSize }
+    })
+    return response.data
+  } catch (error) {
+    throw handleApiError(error)
   }
+}
 
-  // ============= ACTUALIZAR EVENTO =============
-
-  static async updateEvent(
-    eventId: string,
-    data: EventUpdate
-  ): Promise<Event> {
-    try {
-      const response = await api.put<Event>(`/events/${eventId}`, data)
-      return response.data
-    } catch (error) {
-      throw handleApiError(error)
-    }
+/**
+ * Update event (requires authentication)
+ */
+export const updateEvent = async (eventId: string, eventData: EventUpdateData): Promise<EventResponse> => {
+  try {
+    const response = await api.put<EventResponse>(`/events/${eventId}`, eventData)
+    return response.data
+  } catch (error) {
+    throw handleApiError(error)
   }
+}
 
-
-
-  // ============= ELIMINAR EVENTO =============
-
-  static async deleteEvent(eventId: string): Promise<void> {
-    try {
-      await api.delete(`/events/${eventId}`)
-    } catch (error) {
-      throw handleApiError(error)
-    }
+/**
+ * Update event status (requires authentication)
+ */
+export const updateEventStatus = async (eventId: string, status: string): Promise<EventResponse> => {
+  try {
+    const response = await api.patch<EventResponse>(`/events/${eventId}/status`, { status })
+    return response.data
+  } catch (error) {
+    throw handleApiError(error)
   }
+}
 
-  // ============= MÉTODOS DE CAMBIO DE ESTADO (v2) =============
-
-  /**
-   * Método base para cambiar el estado, ahora usa los endpoints
-   * de acción explícitos del backend (ej. /publish, /cancel).
-   */
-  private static async postEventAction(
-    eventId: string,
-    action: 'publish' | 'cancel' | 'draft' | 'complete'
-  ): Promise<Event> {
-    try {
-      const response = await api.post<Event>(`/events/${eventId}/${action}`)
-      return response.data
-    } catch (error) {
-      throw handleApiError(error)
-    }
+/**
+ * Delete event (requires authentication)
+ */
+export const deleteEvent = async (eventId: string): Promise<void> => {
+  try {
+    await api.delete(`/events/${eventId}`)
+  } catch (error) {
+    throw handleApiError(error)
   }
+}
 
-  /**
-   * Publicar un evento (DRAFT -> PUBLISHED)
-   */
-  static async publishEvent(eventId: string): Promise<Event> {
-    return this.postEventAction(eventId, 'publish')
+/**
+ * Publish event
+ */
+export const publishEvent = async (eventId: string): Promise<EventResponse> => {
+  return updateEventStatus(eventId, 'PUBLISHED')
+}
+
+/**
+ * Cancel event
+ */
+export const cancelEvent = async (eventId: string): Promise<EventResponse> => {
+  return updateEventStatus(eventId, 'CANCELLED')
+}
+
+/**
+ * Upload event photo
+ */
+export const uploadEventPhoto = async (eventId: string, photoFile: File): Promise<EventResponse> => {
+  try {
+    const formData = new FormData()
+    formData.append('photo', photoFile)
+    
+    const response = await api.post<EventResponse>(`/events/${eventId}/upload-photo`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+    return response.data
+  } catch (error) {
+    throw handleApiError(error)
   }
-
-  /**
-   * Cancelar un evento
-   */
-  static async cancelEvent(eventId: string): Promise<Event> {
-    return this.postEventAction(eventId, 'cancel')
-  }
-
-    /**
-     * Marcar un evento como borrador (PUBLISHED -> DRAFT)
-     * Nota: Usar con precaución, ya que puede afectar a los tickets vendidos.
-     * El backend puede tener restricciones adicionales.
-     * */
-    static async markEventAsDraft(eventId: string): Promise<Event> {
-        return this.postEventAction(eventId, 'draft')
-    }
-    /**
-     * Marcar un evento como completado (PUBLISHED -> COMPLETED)
-     * */
-    static async completeEvent(eventId: string): Promise<Event> {
-        return this.postEventAction(eventId, 'complete')
-    }
 }

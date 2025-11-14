@@ -21,7 +21,16 @@ export * from './ticket'
 
 // Tipos de marketplace
 export * from './marketplace'
+// Tipos de tipos de entrada (ticket types)
+export * from './ticketType'
 
+// Tipos de respuesta de la API
+export interface ApiResponse<T = any> {
+  success: boolean
+  data: T
+  message?: string
+  errors?: Record<string, string[]>
+}
 // Tipos de promociones
 export * from './promotion'
 
