@@ -26,23 +26,15 @@ const Navbar: React.FC<NavbarProps> = ({
   categories = []
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
-  const router = useRouter();
-
-  const navLinks = [
-    { href: '/', label: 'Inicio' },
-    { href: '/events', label: 'Eventos' },
-    { href: '/marketplace', label: 'Marketplace' },
-    { href: '/about', label: 'Nosotros' },
-    { href: '/contact', label: 'Contacto' },
-  ]
-
+  const router = useRouter(); 
   const { user, logout } = useAuth();
   const links = React.useMemo(() => {
     const base: { href: string; label: string }[] = [
       { href: '/', label: 'Inicio' },
-      { href: '/events', label: 'Eventos' },
-      { href: '/about', label: 'Nosotros' },
-      { href: '/contact', label: 'Contacto' },
+    { href: '/events', label: 'Eventos' },
+    { href: '/marketplace', label: 'Marketplace' },
+    { href: '/about', label: 'Nosotros' },
+    { href: '/contact', label: 'Contacto' },
     ];
   
     return base;
@@ -166,7 +158,7 @@ const Navbar: React.FC<NavbarProps> = ({
                 >
                   <DropdownItem
                   icon={<User className="w-4 h-4" />}
-                  onClick={() => router.push('/profile')}
+                  onClick={() => router.push('/panel/profile')}
                 >
                   Mi perfil
                 </DropdownItem>

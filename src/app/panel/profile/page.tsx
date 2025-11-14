@@ -102,7 +102,7 @@ export default function ProfilePage() {
 
     if (!hasShownToast) {
       if (mpResult === 'success') {
-        toast.success(`¡Cuenta de MercadoPago vinculada exitosamente! ${mpEmail ? `(${mpEmail})` : ''}`, {
+        toast.success(`¡Cuenta de MercadoPago vinculada exitosamente! ${mpEmail ? (mpEmail) : ''}`, {
           duration: 5000,
           icon: '🎉',
           id: 'mp-success' // ID único para evitar duplicados
@@ -231,16 +231,38 @@ export default function ProfilePage() {
 
     setIsSaving(true)
     try {
-      const dataToUpdate: any = { ...formData }
+      // Solo enviar campos que han cambiado
+      const dataToUpdate: any = {}
+      
+      if (formData.firstName !== user.firstName) dataToUpdate.firstName = formData.firstName
+      if (formData.lastName !== user.lastName) dataToUpdate.lastName = formData.lastName
+      if (formData.email !== user.email) dataToUpdate.email = formData.email
+      if (formData.phoneNumber !== user.phoneNumber) dataToUpdate.phoneNumber = formData.phoneNumber || null
+      if (formData.country !== user.country) dataToUpdate.country = formData.country || null
+      if (formData.city !== user.city) dataToUpdate.city = formData.city || null
+      if (formData.gender !== user.gender) dataToUpdate.gender = formData.gender || null
+      
+      // Solo enviar imagen si cambió
       if (previewImage && previewImage !== user.profilePhoto) {
         dataToUpdate.profilePhoto = previewImage
       }
+
+      // Si no hay cambios, no hacer nada
+      if (Object.keys(dataToUpdate).length === 0) {
+        //toast.info('No hay cambios para guardar')
+        setIsEditing(false)
+        return
+      }
+
+      console.log('Data to update:', dataToUpdate)
+      console.log('Number of fields to update:', Object.keys(dataToUpdate).length)
       
       const updatedUser = await AuthService.updateProfile(dataToUpdate)
       updateUser(updatedUser)
       toast.success('Perfil actualizado correctamente')
       setIsEditing(false)
     } catch (error: any) {
+      console.error('Error updating profile:', error)
       const errorMessage = typeof error === 'string' ? error : error?.message || 'Error al actualizar el perfil'
       toast.error(errorMessage)
     } finally {
@@ -347,7 +369,7 @@ export default function ProfilePage() {
                       {previewImage ? (
                         <img
                           src={previewImage}
-                          alt={`${user.firstName} ${user.lastName}`}
+                          alt={ `${user.firstName} ${user.lastName}`}
                           className="w-full h-full object-cover"
                         />
                       ) : (
@@ -921,6 +943,6 @@ export default function ProfilePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  )
+    </div>
+  )
 }
