@@ -1,6 +1,12 @@
 import api, { handleApiError } from '@/lib/api';
-import type { PaginatedListings } from '@/lib/types';
-import type { PaginatedListings, MarketplaceListing, CreateListingData } from '@/lib/types';
+import type { MarketplaceListing, CreateListingData } from '@/lib/types';
+
+type PaginatedListings = {
+  results: MarketplaceListing[];
+  total: number;
+  page: number;
+  page_size: number;
+};
 
 // Asumimos que el backend tendrá un endpoint en /api/marketplace
 const BASE_URL = '/marketplace'; 
@@ -16,7 +22,7 @@ export class MarketplaceService {
     search?: string
   ): Promise<PaginatedListings> {
     try {
-      const params: any = { page, page_size: pageSize, status: 'ACTIVE' };
+      const params: any = { page, page_size: pageSize };
       if (search) params.search = search;
       
       // NOTA: Tendrás que crear este endpoint en tu backend
