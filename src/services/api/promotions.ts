@@ -62,4 +62,15 @@ export const PromotionService = {
       throw handleApiError(err)
     }
   },
+
+  async validate(code: string, eventId: string) {
+    try {
+      const response = await api.get(`/promotions/validate`, {
+        params: { code, event_id: eventId }
+      })
+      return response.data
+    } catch (error: any) {
+      throw handleApiError(error)
+    }
+  }
 }

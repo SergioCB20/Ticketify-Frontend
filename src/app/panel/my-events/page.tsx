@@ -14,8 +14,7 @@ import { formatDate } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 
 // 1. IMPORTA TU SERVICIO Y LA INTERFAZ CORRECTA
-import { getMyEvents, OrganizerEventResponse } from '@/services/api/events' // Ajusta la ruta si es necesario
-
+import { EventService, OrganizerEventResponse } from '@/services/api/events' // Ajusta la ruta si es necesario
 // (La interfaz OrganizerEvent ya no es necesaria, usamos EventResponse)
 
 // const API_URL = 'http://localhost:8000'; // Ya no es necesario, api.ts lo sabe
@@ -41,7 +40,7 @@ export default function OrganizerEventsPage() {
       setIsLoading(true);
       try {
         console.log("Cargando eventos para usuario:", user.id);
-        const events = await getMyEvents(user.id);
+        const events = await EventService.getMyEvents();
         
         // 4. GUARDA LOS EVENTOS
         setEvents(events); 

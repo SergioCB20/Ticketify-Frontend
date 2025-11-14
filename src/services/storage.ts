@@ -19,6 +19,7 @@ const isLocalStorageAvailable = (): boolean => {
 }
 
 export class StorageService {
+  // ACCESS TOKEN ------------------------------
   static setAccessToken(token: string): void {
     try {
       if (isLocalStorageAvailable()) {
@@ -41,6 +42,7 @@ export class StorageService {
     return null
   }
 
+  // REFRESH TOKEN ------------------------------
   static setRefreshToken(token: string): void {
     try {
       if (isLocalStorageAvailable()) {
@@ -63,18 +65,20 @@ export class StorageService {
     return null
   }
 
-  static removeTokens(): void {
+  // TOKENS ------------------------------
+  static clearTokens(): void {
     try {
       if (isLocalStorageAvailable()) {
         localStorage.removeItem(TOKEN_KEY)
         localStorage.removeItem(REFRESH_TOKEN_KEY)
-        console.log('✅ StorageService - Tokens removed')
+        console.log('🗑️ StorageService - Tokens removed')
       }
     } catch (error) {
       console.error('❌ Error removing tokens:', error)
     }
   }
 
+  // USER ------------------------------
   static setUser(user: any): void {
     try {
       if (isLocalStorageAvailable()) {
@@ -93,39 +97,38 @@ export class StorageService {
 
   static getUser<T>(): T | null {
     try {
-      if (isLocalStorageAvailable()) {
-        const userString = localStorage.getItem(USER_KEY)
-        
-        if (!userString) {
-          console.log('⚠️ StorageService - No user data in localStorage')
-          return null
-        }
-        
-        const parsed = JSON.parse(userString)
-        const user = parsed.user || parsed
-        
-        return user
+      if (!isLocalStorageAvailable()) return null
+
+      const stored = localStorage.getItem(USER_KEY)
+      if (!stored) {
+        console.log('⚠️ StorageService - No user data in localStorage')
+        return null
       }
+
+      const parsed = JSON.parse(stored)
+      // soporta estructura `{ user: {...} }`
+      return (parsed.user || parsed) as T
     } catch (error) {
       console.error('❌ Error getting user:', error)
+      return null
     }
-    return null
   }
 
   static removeUser(): void {
     try {
       if (isLocalStorageAvailable()) {
         localStorage.removeItem(USER_KEY)
-        console.log('✅ StorageService - User removed')
+        console.log('🗑️ StorageService - User removed')
       }
     } catch (error) {
       console.error('❌ Error removing user:', error)
     }
   }
 
+  // CLEAR ALL ------------------------------
   static clearAll(): void {
-    console.log('🗑️ StorageService - Clearing all data')
-    this.removeTokens()
+    console.log('🗑️ StorageService - Clearing ALL data')
+    this.clearTokens()
     this.removeUser()
   }
 }

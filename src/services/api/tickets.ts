@@ -1,5 +1,5 @@
-import api, { handleApiError } from '@/lib/api'
-import type { Ticket as MyTicket } from '@/lib/types'
+import api, { handleApiError } from '@/lib/api';
+import type { Ticket as MyTicket } from '@/lib/types';
 
 /** ---------- Tipos que usa la vista paginada ---------- */
 export type TicketListItem = {
@@ -86,15 +86,12 @@ export const getMyTickets = async (page = 1, pageSize = 20): Promise<TicketListR
     })
 
     if (isArrayResponse(data)) {
-      // El backend devolvió un array (contrato de main)
       const items = data.map(toListItem)
       return { items, total: items.length, page: 1, page_size: items.length }
     }
     if (isPagedResponse(data)) {
-      // El backend devolvió estructura paginada (tu contrato)
       return { ...data, items: data.items.map(toListItem) }
     }
-    // Fallback seguro
     return { items: [], total: 0, page, page_size: pageSize }
   } catch (error) {
     throw handleApiError(error)
@@ -148,14 +145,31 @@ export const getMyTicketById = async (id: string): Promise<TicketDetail> => {
 
 /** ---------- API estilo main (array) para no romper a quien lo importe ---------- */
 const BASE_URL = '/tickets'
+
 export class TicketsService {
-  static async getMyTickets(): Promise<MyTicket[]> {
+
+  // 🟢 Obtener tickets del usuario autenticado
+  static async getMyTickets(): Promise<any[]> {
     try {
-      const { data } = await api.get(`${BASE_URL}/my-tickets`)
-      if (isArrayResponse(data)) return data.map(toListItem).map(toMyTicket)
-      if (isPagedResponse(data)) return data.items.map(toListItem).map(toMyTicket)
-      return []
+      const response = await api.get('/tickets/my-tickets')
+      return response.data.items
     } catch (error) {
+      throw handleApiError(error)
+    }
+  }
+
+  // 🆕 Crear ticket real
+  static async createTicket(ticketData: {
+    event_id: string
+    ticket_type_id: string
+    price: number
+    promo_code?: string
+  }): Promise<any> {
+    try {
+      const response = await api.post('/tickets', ticketData)
+      return response.data
+    } catch (error: any) {
+      console.error('❌ Error al crear ticket:', error)
       throw handleApiError(error)
     }
   }

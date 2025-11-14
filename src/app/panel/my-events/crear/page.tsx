@@ -9,7 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { TicketTypeManager } from '@/components/events/ticket-type-manager'
-import { createEventWithTicketTypes, uploadEventPhoto } from '@/services/api/events'
+import { EventService } from '@/services/api/events'
 import { getCategories } from '@/services/api/categories'
 import type { Category } from '@/lib/types/event'
 import type { TicketTypeFormData } from '@/lib/types/ticketType'
@@ -351,12 +351,12 @@ export default function CrearEventoPage() {
         }))
       }
 
-      const result = await createEventWithTicketTypes(eventWithTicketTypes)
+      const result = await EventService.createEventWithTicketTypes(eventWithTicketTypes)
       
       // Si hay imagen principal, subirla
       if (imagenPrincipalFile) {
         try {
-          await uploadEventPhoto(result.event.id, imagenPrincipalFile)
+          await EventService.uploadEventPhoto(result.event.id, imagenPrincipalFile)
         } catch (photoError) {
           console.error('Error al subir la foto:', photoError)
           // No fallar si la foto no se sube, el evento ya fue creado
@@ -483,7 +483,7 @@ export default function CrearEventoPage() {
                       placeholder="Describe tu evento en detalle..."
                       rows={5}
                       value={formData.descripcion}
-                      onChange={(e) => handleInputChange('descripcion', e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('descripcion', e.target.value)}
                       error={errors.descripcion}
                       required
                       disabled={loading}
