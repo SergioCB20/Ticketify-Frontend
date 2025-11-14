@@ -41,3 +41,10 @@ export interface ResetPasswordData {
   token: string
   newPassword: string
 }
+
+export interface GoogleLoginData {
+  email: string
+  firstName: string
+  lastName: string
+  avatar?: string
+}

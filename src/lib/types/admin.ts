@@ -41,4 +41,15 @@ export interface UpdateAdminRoleRequest {
   role: 'SUPER_ADMIN' | 'SUPPORT_ADMIN' | 'SECURITY_ADMIN' | 'CONTENT_ADMIN'
 }
 
+export interface CreateAdminRequest {
+  email: string
+  password: string
+  firstName: string
+  lastName: string
+  phoneNumber?: string
+  role: 'SUPER_ADMIN' | 'SUPPORT_ADMIN' | 'SECURITY_ADMIN' | 'CONTENT_ADMIN'
+  documentType: 'DNI' | 'CE' | 'Pasaporte'
+  documentId: string
+}
+
 export type AdminRole = 'SUPER_ADMIN' | 'SUPPORT_ADMIN' | 'SECURITY_ADMIN' | 'CONTENT_ADMIN'

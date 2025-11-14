@@ -15,6 +15,13 @@ export interface User {
   createdAt: string
   lastLogin?: string
   roles: string[]
+  
+  // Campos de MercadoPago (opcionales)
+  mercadopagoUserId?: string
+  mercadopagoPublicKey?: string
+  mercadopagoEmail?: string
+  isMercadopagoConnected?: boolean
+  mercadopagoConnectedAt?: string
 }
 
 export interface UserUpdate {

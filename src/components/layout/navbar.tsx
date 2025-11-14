@@ -1,10 +1,11 @@
+"use client";
 import React from 'react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { Button } from '../ui/button'
 import { Avatar } from '../ui/avatar'
 import { Dropdown, DropdownItem, DropdownDivider } from '../ui/dropdown'
-import { User, LogOut, ChevronDown } from 'lucide-react'
+import { User, LogOut, ChevronDown, Ticket } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import { SearchWithFilters } from '../ui/search-with-filters'
@@ -25,17 +26,20 @@ const Navbar: React.FC<NavbarProps> = ({
   categories = []
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
-  const router = useRouter();
-
-  const navLinks = [
-    { href: '/', label: 'Inicio' },
+  const router = useRouter(); 
+  const { user, logout } = useAuth();
+  const links = React.useMemo(() => {
+    const base: { href: string; label: string }[] = [
+      { href: '/', label: 'Inicio' },
     { href: '/events', label: 'Eventos' },
     { href: '/marketplace', label: 'Marketplace' },
     { href: '/about', label: 'Nosotros' },
     { href: '/contact', label: 'Contacto' },
-  ]
+    ];
+  
+    return base;
+  }, [user]);
 
-  const { user, logout } = useAuth();
 
   const onLogin = () => {
     router.push('/login');
@@ -115,7 +119,7 @@ const Navbar: React.FC<NavbarProps> = ({
           )}
           {/* Desktop Navigation */}
           <div className="hidden md:flex md:items-center md:space-x-1">
-            {navLinks.map((link) => (
+            {links.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -153,19 +157,29 @@ const Navbar: React.FC<NavbarProps> = ({
                   }
                 >
                   <DropdownItem
-                    icon={<User className="w-4 h-4" />}
-                    onClick={() => router.push('/panel/profile')}
-                  >
-                    Mi perfil
-                  </DropdownItem>
-                  <DropdownDivider />
-                  <DropdownItem
-                    icon={<LogOut className="w-4 h-4" />}
-                    onClick={logout}
-                    danger
-                  >
-                    Cerrar sesión
-                  </DropdownItem>
+                  icon={<User className="w-4 h-4" />}
+                  onClick={() => router.push('/panel/profile')}
+                >
+                  Mi perfil
+                </DropdownItem>
+
+                <DropdownItem
+                  icon={<Ticket className="w-4 h-4" />}
+                  onClick={() => router.push('/panel/my-tickets')}
+                >
+                  Mis tickets
+                </DropdownItem>
+
+                <DropdownDivider />
+
+                <DropdownItem
+                  icon={<LogOut className="w-4 h-4" />}
+                  onClick={logout}
+                  danger
+                >
+                  Cerrar sesión
+                </DropdownItem>
+
                 </Dropdown>
               </div>
             ) : (
@@ -216,7 +230,7 @@ const Navbar: React.FC<NavbarProps> = ({
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-gray-200 animate-slide-down">
             <div className="flex flex-col space-y-2">
-              {navLinks.map((link) => (
+              {links.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
@@ -247,6 +261,18 @@ const Navbar: React.FC<NavbarProps> = ({
                     >
                       Mi perfil
                     </Button>
+                    <Button
+                      variant="outline"
+                      size="md"
+                      fullWidth
+                      onClick={() => {
+                        router.push('/panel/my-tickets')
+                        setMobileMenuOpen(false)
+                      }}
+                    >
+                      Mis tickets
+                    </Button>
+
                     <Button
                       variant="outline"
                       size="md"

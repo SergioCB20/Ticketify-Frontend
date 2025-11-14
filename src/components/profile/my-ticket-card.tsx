@@ -1,4 +1,3 @@
-
 'use client'
 
 import React, { useState } from 'react'
@@ -7,8 +6,11 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { formatDate } from '@/lib/utils'
-import { Calendar, MapPin, Tag, Percent } from 'lucide-react'
+import { Calendar, MapPin, Tag, Percent, X, Eye } from 'lucide-react'
 import { SellTicketModal } from '@/components/marketplace/sell-ticket-modal'
+import { MarketplaceService } from '@/services/api/marketplace'
+import { toast } from 'react-hot-toast'
+import Link from 'next/link'
 
 interface MyTicketCardProps {
   ticket: MyTicket
@@ -17,9 +19,30 @@ interface MyTicketCardProps {
 
 export function MyTicketCard({ ticket, onTicketListed }: MyTicketCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isDelisting, setIsDelisting] = useState(false)
 
+  // ✅ Lógica simplificada: el ticket se mantiene ACTIVE hasta que se venda
   const canBeSold = ticket.status === 'ACTIVE' && !ticket.isListed;
+  const canBeDelisted = ticket.isListed; // Si está listado, se puede retirar
   const isSold = ticket.status === 'TRANSFERRED';
+
+  const handleDelistTicket = async () => {
+    if (!ticket.listingId) {
+      toast.error('No se encontró el ID del listing')
+      return
+    }
+
+    setIsDelisting(true)
+    try {
+      await MarketplaceService.cancelListing(ticket.listingId)
+      toast.success('¡Entrada retirada del marketplace!')
+      onTicketListed() // Refrescar la lista
+    } catch (error: any) {
+      toast.error(error.message || 'Error al retirar la entrada')
+    } finally {
+      setIsDelisting(false)
+    }
+  }
 
   return (
     <>
@@ -27,7 +50,7 @@ export function MyTicketCard({ ticket, onTicketListed }: MyTicketCardProps) {
         <CardHeader className="pb-3">
           <h3 className="font-semibold text-lg text-gray-900">{ticket.event.title}</h3>
           <Badge 
-            variant={canBeSold ? "success" : "default"}
+            variant={canBeSold ? "success" : ticket.isListed ? "warning" : "default"}
             className="w-fit"
           >
             {ticket.isListed ? "Publicado en Marketplace" : (isSold ? "Vendido/Transferido" : ticket.status)}
@@ -47,7 +70,18 @@ export function MyTicketCard({ ticket, onTicketListed }: MyTicketCardProps) {
             {ticket.event.venue}
           </div>
         </CardContent>
-        <CardFooter>
+        <CardFooter className="flex flex-col gap-2">
+          {/* Botón Ver más - Siempre visible para tickets ACTIVE o Listados */}
+          {(canBeSold || canBeDelisted) && (
+            <Link href={`/panel/my-tickets/${ticket.id}`} className="w-full">
+              <Button variant="outline" className="w-full">
+                <Eye className="w-4 h-4 mr-2" />
+                Ver más
+              </Button>
+            </Link>
+          )}
+          
+          {/* Botón Vender - Solo si está ACTIVE y no listado */}
           {canBeSold && (
             <Button 
               variant="primary" 
@@ -58,14 +92,32 @@ export function MyTicketCard({ ticket, onTicketListed }: MyTicketCardProps) {
               Vender en Marketplace
             </Button>
           )}
-          {ticket.isListed && (
-            <Button variant="outline" className="w-full" disabled>
-              Publicado
+          
+          {/* Botón Retirar - Solo si está listado */}
+          {canBeDelisted && (
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              onClick={handleDelistTicket}
+              disabled={isDelisting}
+            >
+              <X className="w-4 h-4 mr-2" />
+              {isDelisting ? 'Retirando...' : 'Retirar del Marketplace'}
             </Button>
           )}
-          {!canBeSold && !ticket.isListed && (
+          
+          {/* Mensaje de vendido - Solo si fue transferido */}
+          {isSold && (
+            <div className="w-full text-center py-3 px-4 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-sm font-medium text-gray-700">✓ Entrada Vendida</p>
+              <p className="text-xs text-gray-500 mt-1">Esta entrada fue transferida al comprador</p>
+            </div>
+          )}
+          
+          {/* Fallback para otros estados */}
+          {!canBeSold && !canBeDelisted && !isSold && (
             <Button variant="ghost" className="w-full" disabled>
-              No se puede vender
+              No disponible
             </Button>
           )}
         </CardFooter>

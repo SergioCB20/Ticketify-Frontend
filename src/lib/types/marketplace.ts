@@ -2,9 +2,18 @@ import type { Ticket } from './ticket'
 import type { User } from './user'
 
 // Tipos de marketplace (reventa de tickets)
+interface TicketWithType extends Ticket {
+  ticketType: {
+    id: string
+    name: string
+    price: number
+  }
+}
+
 export interface MarketplaceListing {
   id: string
   ticketId: string
+  ticket_type_id: string
   ticket: Ticket
   sellerId: string
   seller: User
