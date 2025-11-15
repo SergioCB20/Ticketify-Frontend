@@ -32,7 +32,7 @@ export default function MyTicketsPage() {
     setError(null)
     try {
       const data = await TicketsService.getMyTickets()
-      setTickets(data)
+      setTickets(data || [])
     } catch (err: any) {
       setError(err.message || 'No se pudieron cargar tus tickets.')
     } finally {

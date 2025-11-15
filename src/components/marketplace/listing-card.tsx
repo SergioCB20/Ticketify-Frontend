@@ -144,7 +144,7 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, className }) => {
           variant="primary"
           size="md"
           className="group"
-          onClick={handleRedirectToMarketplaceCheckout}
+          onClick={handleRedirectToCheckout}
           loading={loading}
         >
           Comprar
