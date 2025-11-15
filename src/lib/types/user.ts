@@ -1,3 +1,13 @@
+//ROLES
+export type UserRole =
+  | 'ATTENDEE'
+  | 'ORGANIZER'
+  | 'SUPER_ADMIN'
+  | 'SUPPORT_ADMIN'
+  | 'SECURITY_ADMIN'
+  | 'CONTENT_ADMIN'
+
+
 // Tipos relacionados con usuarios
 export interface User {
   id: string
@@ -14,7 +24,7 @@ export interface User {
   isActive: boolean
   createdAt: string
   lastLogin?: string
-  roles: string[]
+  roles?: UserRole[]
   
   // Campos de MercadoPago (opcionales)
   mercadopagoUserId?: string

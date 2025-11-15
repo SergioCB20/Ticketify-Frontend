@@ -28,6 +28,8 @@ const Navbar: React.FC<NavbarProps> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const router = useRouter(); 
   const { user, logout } = useAuth();
+  const isOrganizer = user?.roles?.includes('ORGANIZER')
+  const isAttendee = user?.roles?.includes('ATTENDEE')
   const links = React.useMemo(() => {
     const base: { href: string; label: string }[] = [
       { href: '/', label: 'Inicio' },
@@ -163,6 +165,25 @@ const Navbar: React.FC<NavbarProps> = ({
                   Mi perfil
                 </DropdownItem>
 
+                  {/* 🔹 Opción según rol */}
+                  {isOrganizer && (
+                    <DropdownItem
+                      icon={<Ticket className="w-4 h-4" />}
+                      onClick={() => router.push('/panel/my-events')}
+                    >
+                      Mis eventos
+                    </DropdownItem>
+                  )}
+
+                  {!isOrganizer && isAttendee && (
+                    <DropdownItem
+                      icon={<Ticket className="w-4 h-4" />}
+                      onClick={() => router.push('/panel/my-tickets')}
+                    >
+                      Mis tickets
+                    </DropdownItem>
+                  )}
+
                 <DropdownDivider />
 
                 <DropdownItem
@@ -254,6 +275,19 @@ const Navbar: React.FC<NavbarProps> = ({
                     >
                       Mi perfil
                     </Button>
+                    {isOrganizer ? (
+                    <Button
+                      variant="outline"
+                      size="md"
+                      fullWidth
+                      onClick={() => {
+                        router.push('/panel/my-events')
+                        setMobileMenuOpen(false)
+                      }}
+                    >
+                      Mis eventos
+                    </Button>
+                  ) : (
                     <Button
                       variant="outline"
                       size="md"
@@ -265,6 +299,8 @@ const Navbar: React.FC<NavbarProps> = ({
                     >
                       Mis tickets
                     </Button>
+                  )}
+
 
                     <Button
                       variant="outline"
