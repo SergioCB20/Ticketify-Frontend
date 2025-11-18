@@ -1,15 +1,25 @@
-import api, { handleApiError } from '@/lib/api';
-import type { MarketplaceListing, CreateListingData } from '@/lib/types';
+import api, { handleApiError } from '@/lib/api'
+import type { MarketplaceListing, CreateListingData } from '@/lib/types'
 
 type PaginatedListings = {
-  results: MarketplaceListing[];
-  total: number;
-  page: number;
-  page_size: number;
-};
+  items: MarketplaceListing[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
 
-// Asumimos que el backend tendrá un endpoint en /api/marketplace
-const BASE_URL = '/marketplace'; 
+export interface MarketplacePurchaseRequest {
+  // Puedes agregar campos adicionales si es necesario
+}
+
+export interface MarketplacePurchaseResponse {
+  listingId: string
+  initPoint: string
+  preferenceId: string
+}
+
+const BASE_URL = '/marketplace'
 
 export class MarketplaceService {
   
@@ -19,52 +29,65 @@ export class MarketplaceService {
   static async getListings(
     page: number = 1,
     pageSize: number = 12,
-    search?: string
+    search?: string,
+    minPrice?: number,
+    maxPrice?: number,
+    orderBy?: string
   ): Promise<PaginatedListings> {
     try {
-      const params: any = { page, page_size: pageSize };
-      if (search) params.search = search;
+      const params: any = { page, page_size: pageSize }
+      if (search) params.search = search
+      if (minPrice !== undefined) params.min_price = minPrice
+      if (maxPrice !== undefined) params.max_price = maxPrice
+      if (orderBy) params.order_by = orderBy
       
-      // NOTA: Tendrás que crear este endpoint en tu backend
-      const response = await api.get<PaginatedListings>(`${BASE_URL}/listings`, { params });
+      const response = await api.get<PaginatedListings>(`${BASE_URL}/listings`, { params })
       
-      return response.data;
+      return response.data
     } catch (error) {
-      throw handleApiError(error);
+      throw handleApiError(error)
     }
   }
   
-
   /**
    * Obtener el detalle de un listado específico
    */
   static async getListingById(listingId: string) {
     try {
-      // NOTA: Tendrás que crear este endpoint en tu backend
-      const response = await api.get(`${BASE_URL}/listings/${listingId}`);
-      return response.data;
+      const response = await api.get(`${BASE_URL}/listings/${listingId}`)
+      return response.data
     } catch (error) {
-      throw handleApiError(error);
+      throw handleApiError(error)
     }
   }
 
+  /**
+   * Crear un nuevo listado en el marketplace
+   */
   static async createListing(data: CreateListingData): Promise<MarketplaceListing> {
     try {
-      // Llama a POST /api/marketplace/listings
-      const response = await api.post<MarketplaceListing>(`${BASE_URL}/listings`, data);
-      return response.data;
+      const response = await api.post<MarketplaceListing>(`${BASE_URL}/listings`, data)
+      return response.data
     } catch (error) {
-      throw handleApiError(error);
+      throw handleApiError(error)
     }
   }
 
-  static async buyListing(listingId: string): Promise<{success: boolean, newTicketId: string}> {
+  /**
+   * Crear preferencia de pago para comprar un ticket del marketplace
+   */
+  static async createMarketplacePurchase(
+    listingId: string,
+    data: MarketplacePurchaseRequest
+  ): Promise<MarketplacePurchaseResponse> {
     try {
-      // Llama a POST /api/marketplace/listings/{listing_id}/buy
-      const response = await api.post(`${BASE_URL}/listings/${listingId}/buy`);
-      return response.data;
+      const response = await api.post<MarketplacePurchaseResponse>(
+        `${BASE_URL}/listings/${listingId}/create-preference`,
+        data
+      )
+      return response.data
     } catch (error) {
-      throw handleApiError(error);
+      throw handleApiError(error)
     }
   }
 
@@ -73,10 +96,9 @@ export class MarketplaceService {
    */
   static async cancelListing(listingId: string): Promise<void> {
     try {
-      // Llama a DELETE /api/marketplace/listings/{listing_id}
-      await api.delete(`${BASE_URL}/listings/${listingId}`);
+      await api.delete(`${BASE_URL}/listings/${listingId}`)
     } catch (error) {
-      throw handleApiError(error);
+      throw handleApiError(error)
     }
   }
 }

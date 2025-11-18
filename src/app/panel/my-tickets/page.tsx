@@ -109,12 +109,7 @@ export default function MyTicketsPage() {
         <div className="space-y-6">
 
           <div className="flex justify-end">
-            <Link href="/panel">
-              <Button variant="outline">
-                <Home size={18} className="mr-2" />
-                Volver al Incio
-              </Button>
-            </Link>
+           
         </div>
           <h1 className="text-3xl font-bold text-gray-900">Mis Tickets</h1>
           <p className="mt-2 text-gray-500">
