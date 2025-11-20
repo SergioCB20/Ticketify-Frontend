@@ -15,7 +15,7 @@ export interface CreatePreferenceRequest {
 
 export interface CreatePreferenceResponse {
   purchaseId: string
-  initPoint: string
+  init_point: string
   preferenceId: string
 }
 

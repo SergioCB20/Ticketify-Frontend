@@ -67,10 +67,12 @@ export default function EventCheckoutPage() {
       }
 
       // Crear preferencia de pago
+      console.log(requestData)
       const response = await PurchaseService.createPreference(requestData)
+      console.log(response)
 
       // Redirigir a MercadoPago
-      window.location.href = response.initPoint
+      window.location.href = response.init_point
 
     } catch (error: any) {
       console.error('Error al procesar el pago:', error)
