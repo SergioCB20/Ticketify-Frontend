@@ -1,5 +1,3 @@
-'use client'
-
 import React, { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Navbar } from '@/components/layout/navbar'
@@ -61,25 +59,25 @@ export default function MarketplaceCheckoutPage() {
     setError(null)
 
     try {
-      // Validación de tarjeta simulada
-      const lastDigits = cardNumber.replace(/\s/g, '').slice(-4)
+      // --- LÓGICA MODIFICADA ---
+      // Ya no validamos la tarjeta simulada
       
-      // Simular rechazo de tarjeta
-      if (lastDigits === '0000') {
-        throw new Error('Tarjeta rechazada por el banco emisor.')
-      }
-      if (lastDigits === '1111') {
-        throw new Error('Fondos insuficientes.')
-      }
+      console.log(`[DEBUG] Iniciando pago para listingId: ${listingId}`)
 
-      // Si el pago es "exitoso", proceder con la compra del marketplace
-      const result = await MarketplaceService.buyListing(listingId!)
-      
-      if (result.success) {
-        setNewTicketId(result.newTicketId)
-        setSuccess(true)
-        toast.success('¡Compra exitosa! Ticket transferido.')
+      // 1. Llamar al nuevo endpoint del backend
+      const response = await api.post('/marketplace/create-preference', { 
+        listing_id: listingId 
+      })
+
+      const { init_point } = response.data;
+
+      if (init_point) {
+        // 2. Redirigir a MercadoPago
+        window.location.href = init_point;
+      } else {
+        throw new Error("No se pudo obtener el link de pago.")
       }
+      
     } catch (err: any) {
       console.error('[DEBUG] Error capturado:', err)
       
@@ -90,9 +88,9 @@ export default function MarketplaceCheckoutPage() {
       
       setError(errorMessage)
       toast.error(errorMessage)
-    } finally {
-      setLoading(false)
+      setLoading(false) // <-- Importante: Poner el loading en false en caso de error
     }
+    // Ya no necesitamos el 'finally' porque la página redirige o muestra error
   }
 
   if (success && newTicketId) {

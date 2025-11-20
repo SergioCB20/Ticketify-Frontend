@@ -25,21 +25,15 @@ export class MercadoPagoService {
     }
   }
 
-  /**
-   * Iniciar el flujo OAuth de MercadoPago
-   * En desarrollo, usa el endpoint de test que acepta token por URL
-   * En producción, usará el endpoint normal con autenticación en header
-   */
-  static getConnectUrl(accessToken: string): string {
-    const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-    const isDevelopment = process.env.NODE_ENV !== 'production'
-    
-    if (isDevelopment) {
-      // En desarrollo, usar endpoint de test con token en URL
-      return `${baseURL}/api/mercadopago/test-connect?token=${accessToken}`
-    } else {
-      // En producción, usar endpoint normal (requiere header Authorization)
-      return `${baseURL}/api/mercadopago/connect`
+  static async connect(): Promise<void> {
+    try {
+      // 1. Pedimos la URL al backend (enviando el token automáticamente por api instance)
+      const response = await api.get<{ url: string }>('/mercadopago/connect')
+      
+      // 2. Redirigimos al usuario a Mercado Pago
+      window.location.href = response.data.url
+    } catch (error) {
+      throw handleApiError(error)
     }
   }
 

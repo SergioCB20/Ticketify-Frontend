@@ -307,17 +307,13 @@ export default function ProfilePage() {
     }
   }
 
-  const handleConnectMercadoPago = () => {
-    // Obtener el token de acceso
-    const token = StorageService.getAccessToken()
-    if (!token) {
-      toast.error('No se encontró sesión activa. Por favor, inicia sesión nuevamente.')
-      return
+  const handleConnectMercadoPago = async () => {
+    try {
+      await MercadoPagoService.connect()
+      // La página se recargará cuando vuelva de MP, así que no necesitamos setLoading(false)
+    } catch (error: any) {
+      toast.error('No se pudo iniciar la conexión con Mercado Pago')
     }
-    
-    // Redirigir a la URL de OAuth (con token en desarrollo)
-    const connectUrl = MercadoPagoService.getConnectUrl(token)
-    window.location.href = connectUrl
   }
 
   const handleDisconnectMercadoPago = async () => {
