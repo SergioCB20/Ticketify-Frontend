@@ -25,14 +25,21 @@ export default function MarketplaceCheckoutPage() {
         const data = await MarketplaceService.getListingById(id as string)
         setListing(data)
       } catch (error: any) {
-        toast.error(error.message || 'Error al cargar el listado')
+        console.error('Error al cargar listing:', error)
+        const errorMessage = error?.message || error?.detail || 'Error al cargar el listado'
+        toast.error(errorMessage)
         router.push('/marketplace')
       } finally {
         setLoading(false)
       }
     }
 
-    fetchListing()
+    if (id && id !== 'undefined') {
+      fetchListing()
+    } else {
+      toast.error('ID de listado inválido')
+      router.push('/marketplace')
+    }
   }, [id, router])
 
   const handleCheckout = async () => {
@@ -44,17 +51,46 @@ export default function MarketplaceCheckoutPage() {
     }
 
     setProcessing(true)
-
+    
     try {
+      console.log('Creando preferencia de pago para listing:', listing.id)
+      
       // Crear preferencia de pago
       const response = await MarketplaceService.createMarketplacePurchase(listing.id, {})
+      
+      console.log('Preferencia creada exitosamente:', response)
+
+      // Verificar que la respuesta tenga el initPoint
+      if (!response.initPoint) {
+        throw new Error('No se recibió la URL de pago de MercadoPago')
+      }
 
       // Redirigir a MercadoPago
       window.location.href = response.initPoint
 
     } catch (error: any) {
       console.error('Error al procesar el pago:', error)
-      toast.error(error.message || 'Error al procesar el pago')
+      
+      // Manejar diferentes tipos de errores
+      let errorMessage = 'Error al procesar el pago'
+      
+      if (error?.response?.data?.detail) {
+        // Error del backend con detail
+        if (typeof error.response.data.detail === 'string') {
+          errorMessage = error.response.data.detail
+        } else if (Array.isArray(error.response.data.detail)) {
+          // Error de validación de Pydantic
+          errorMessage = error.response.data.detail
+            .map((err: any) => err.msg || 'Error de validación')
+            .join(', ')
+        }
+      } else if (error?.message) {
+        errorMessage = error.message
+      } else if (typeof error === 'string') {
+        errorMessage = error
+      }
+      
+      toast.error(errorMessage)
       setProcessing(false)
     }
   }
@@ -166,7 +202,7 @@ export default function MarketplaceCheckoutPage() {
                   <ShoppingCart className="w-5 h-5 text-gray-400" />
                   <div>
                     <p className="text-xs text-gray-500">Tipo de entrada</p>
-                    <p className="font-medium">{listing.ticket?.ticket_type?.name || 'General'}</p>
+                    <p className="font-medium">{listing.ticket?.ticketType?.name || 'General'}</p>
                   </div>
                 </div>
               </div>
