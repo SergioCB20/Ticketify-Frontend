@@ -24,17 +24,33 @@ export default function AdminLoginPage() {
     
     try {
       const response = await login({ email, password })
-      
+
+      // Log detallado para debugging
+      console.log('=== ADMIN LOGIN DEBUG ===')
+      console.log('Response completo:', response)
+      console.log('Usuario:', response.user)
+      console.log('Roles del usuario:', response.user.roles)
+      console.log('Tipo de roles:', typeof response.user.roles)
+      console.log('Es array?:', Array.isArray(response.user.roles))
+
       // Verificar que tenga rol de admin
       const adminRoles = ['SUPER_ADMIN', 'SUPPORT_ADMIN', 'SECURITY_ADMIN', 'CONTENT_ADMIN']
-      const hasAdminRole = response.user.roles?.some(role => adminRoles.includes(role))
-      
+      const userRoles = response.user.roles || []
+      console.log('Roles de usuario (con fallback):', userRoles)
+
+      const hasAdminRole = userRoles.some(role => adminRoles.includes(role))
+      console.log('Tiene rol de admin?:', hasAdminRole)
+
       if (!hasAdminRole) {
-        setError('Este usuario no tiene privilegios de administrador')
+        console.error('❌ Usuario sin privilegios de admin')
+        console.error('Roles esperados:', adminRoles)
+        console.error('Roles del usuario:', userRoles)
+        setError(`Este usuario no tiene privilegios de administrador. Roles: ${userRoles.join(', ') || 'ninguno'}`)
         setLoading(false)
         return
       }
-      
+
+      console.log('✅ Login de admin exitoso, redirigiendo...')
       // Redirigir al dashboard de admin
       router.push('/admin')
       

@@ -1,22 +1,26 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { AdminService } from '@/services/api/admin'
+import { AdminCategoriesService } from '@/services/api/adminCategories'
 import { UsersTable } from '@/components/admin/UsersTable'
 import { AdminsTable } from '@/components/admin/AdminsTable'
+import { CategoriesTable } from '@/components/admin/CategoriesTable'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import type { AdminStats, PaginatedUsers, AdminUser } from '@/lib/types'
-import { 
-  LayoutDashboard, 
-  Users, 
-  Shield, 
-  Search, 
-  RefreshCw, 
+import type { AdminStats, PaginatedUsers, AdminUser, Category } from '@/lib/types'
+import {
+  LayoutDashboard,
+  Users,
+  Shield,
+  Search,
+  RefreshCw,
   LogOut,
   Menu,
-  X
+  X,
+  FolderOpen
 } from 'lucide-react'
 
 /*
@@ -41,12 +45,14 @@ function AdminStatsGrid({ stats }: { stats: AdminStats }) {
 }
 
 export default function AdminDashboard() {
+  const router = useRouter()
   const { user, logout } = useAuth()
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [users, setUsers] = useState<PaginatedUsers | null>(null)
   const [admins, setAdmins] = useState<AdminUser[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'admins'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'admins' | 'categories'>('overview')
   const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [filterActive, setFilterActive] = useState<boolean | undefined>(undefined)
@@ -58,21 +64,37 @@ export default function AdminDashboard() {
 
   const loadData = async () => {
     setLoading(true)
-    try {
-      const [statsData, usersData, adminsData] = await Promise.all([
-        AdminService.getStats(),
-        AdminService.getUsers(currentPage, 8, searchTerm, filterActive),
-        AdminService.getAdmins()
-      ])
 
+    // Cargar cada recurso por separado para que los permisos no bloqueen todo
+    try {
+      const statsData = await AdminService.getStats()
       setStats(statsData)
+    } catch (error) {
+      console.error('Error loading stats:', error)
+    }
+
+    try {
+      const usersData = await AdminService.getUsers(currentPage, 8, searchTerm, filterActive)
       setUsers(usersData)
+    } catch (error) {
+      console.error('Error loading users:', error)
+    }
+
+    try {
+      const adminsData = await AdminService.getAdmins()
       setAdmins(adminsData)
     } catch (error) {
-      console.error('Error loading admin data:', error)
-    } finally {
-      setLoading(false)
+      console.error('Error loading admins:', error)
     }
+
+    try {
+      const categoriesData = await AdminCategoriesService.getCategories()
+      setCategories(categoriesData)
+    } catch (error) {
+      console.error('Error loading categories:', error)
+    }
+
+    setLoading(false)
   }
 
   const handleRefresh = () => {
@@ -82,6 +104,7 @@ export default function AdminDashboard() {
   const handleLogout = async () => {
     if (confirm('¿Estás seguro de cerrar sesión?')) {
       await logout()
+      router.push('/admin/login')
     }
   }
 
@@ -206,6 +229,23 @@ export default function AdminDashboard() {
                 </span>
               )}
             </button>
+
+            <button
+              onClick={() => { setActiveTab('categories'); setSidebarOpen(false) }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                activeTab === 'categories'
+                  ? 'bg-violet-50 text-violet-600'
+                  : 'text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <FolderOpen className="w-5 h-5" />
+              <span className="font-medium">Categorías</span>
+              {categories && (
+                <span className="ml-auto bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full">
+                  {categories.length}
+                </span>
+              )}
+            </button>
           </nav>
         </aside>
 
@@ -278,6 +318,16 @@ export default function AdminDashboard() {
                 admins={admins}
                 currentUserId={user.id}
                 onAdminUpdated={loadData}
+              />
+            </div>
+          )}
+
+          {/* Categorías */}
+          {activeTab === 'categories' && categories && (
+            <div className="space-y-6">
+              <CategoriesTable
+                categories={categories}
+                onCategoryUpdated={loadData}
               />
             </div>
           )}
