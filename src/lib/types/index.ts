@@ -40,6 +40,9 @@ export * from './api'
 // Tipos de compras y pagos
 export * from './purchase'
 
+// Tipos de categorías
+export * from './category'
+
 // Tipo específico para "Mis Tickets" (extendido)
 export interface MyTicket {
   id: string
