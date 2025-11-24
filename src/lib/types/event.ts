@@ -34,6 +34,10 @@ export interface Event {
   status: EventStatus
   multimedia: string[]
   organizerId: string
+  category?: {          // ← ESTA ES LA QUE TU UI NECESITA
+    id: string
+    name: string
+  }
   availableTickets: number
   isSoldOut: boolean
   createdAt: string
