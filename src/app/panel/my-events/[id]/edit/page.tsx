@@ -6,24 +6,41 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Container } from '@/components/ui/container'
 import { Select } from '@/components/ui/select'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { getCategories } from '@/services/api/categories'
 import type { Category } from '@/lib/types/event'
 import { EventService } from '@/services/api/events'
+import { TicketTypeService } from '@/services/api/ticketTypes'
 import type { EventDetail, EventUpdate, EventStatus } from '@/lib/types'
-import {
-  Calendar,
-  MapPin,
-  Users,
-  AlertCircle,
-  Save,
-  ArrowLeft,
-  Image as ImageIcon,
-  Trash2,
-  Eye,
-  Ban,
-  CheckCircle,
-  Edit3
-} from 'lucide-react'
+import { Save, ArrowLeft } from 'lucide-react'
+
+type TicketTypeFormRow = {
+  id?: string
+  name: string
+  description: string
+  price: number
+  quantity_available: number
+  max_purchase: number | null
+}
+
+type FormData = {
+  title: string
+  description: string
+  startDate: string
+  endDate: string
+  venue: string
+  totalCapacity: number
+  multimedia: string[]
+  ticketTypes: TicketTypeFormRow[]
+  category_id?: string
+}
+
+const STATUS_OPTIONS: { value: EventStatus; label: string }[] = [
+  { value: 'DRAFT' as EventStatus, label: 'Borrador' },
+  { value: 'PUBLISHED' as EventStatus, label: 'Publicado' },
+  { value: 'CANCELLED' as EventStatus, label: 'Cancelado' },
+  { value: 'COMPLETED' as EventStatus, label: 'Completado' }
+]
 
 export default function EditEventPage() {
   const router = useRouter()
@@ -31,11 +48,7 @@ export default function EditEventPage() {
   const eventId = params?.id as string
 
   const [event, setEvent] = useState<EventDetail | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const [formData, setFormData] = useState<EventUpdate>({
+  const [formData, setFormData] = useState<FormData>({
     title: '',
     description: '',
     startDate: '',
@@ -43,46 +56,105 @@ export default function EditEventPage() {
     venue: '',
     totalCapacity: 0,
     multimedia: [],
+    ticketTypes: [],
     category_id: undefined
   })
 
   const [categories, setCategories] = useState<Category[]>([])
   const [loadingCategories, setLoadingCategories] = useState(true)
-  const [newImageUrl, setNewImageUrl] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [statusUpdating, setStatusUpdating] = useState(false)
+  const [ticketCapacityError, setTicketCapacityError] = useState<string | null>(null)
 
-  // 🔐 Helper robusto para convertir cualquier error del backend a string
+
+  // ✅ NUEVO: índices seleccionados para eliminación masiva
+  const [selectedTicketIndexes, setSelectedTicketIndexes] = useState<number[]>([])
+
+  // Imagen
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string>('')
+  const [existingImageUrl, setExistingImageUrl] = useState<string>('')
+
   const showError = (err: any, fallback: string) => {
     console.error(err)
     let msg = fallback
-
     try {
       const data = err?.response?.data ?? err
-
-      if (typeof data === 'string') {
-        msg = data
-      } else if (typeof data?.detail === 'string') {
-        msg = data.detail
-      } else if (Array.isArray(data?.detail)) {
-        msg =
-          data.detail
-            .map((e: any) => e?.msg ?? '')
-            .filter(Boolean)
-            .join(' | ') || fallback
-      } else if (typeof data?.msg === 'string') {
-        msg = data.msg
-      } else if (typeof err?.message === 'string') {
-        msg = err.message
+      if (typeof data === 'string') msg = data
+      else if (typeof data?.detail === 'string') msg = data.detail
+      else if (Array.isArray(data?.detail)) {
+        msg = data.detail.map((e: any) => e?.msg ?? '').filter(Boolean).join(' ') || fallback
       }
     } catch {
-      // si algo falla, usamos el fallback
+      msg = fallback
     }
-
     setError(msg)
+    setSuccess(null)
+  }
+
+  const loadEvent = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      setSuccess(null)
+
+      const data = await EventService.getEventById(eventId)
+      setEvent(data)
+
+      const startDate = data.startDate
+        ? new Date(data.startDate).toISOString().slice(0, 16)
+        : ''
+      const endDate = data.endDate
+        ? new Date(data.endDate).toISOString().slice(0, 16)
+        : ''
+
+      const fixedTickets =
+        (data as any).ticket_types?.map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          price: t.price,
+          description: t.description ?? '',
+          quantity_available: t.quantity_available ?? t.quantity ?? 0,
+          max_purchase: t.max_purchase ?? null
+        })) ?? []
+
+      const photoUrl =
+        (data as any).photoUrl ||
+        (data as any).imageUrl ||
+        ''
+
+      setFormData({
+        title: data.title ?? '',
+        description: data.description ?? '',
+        startDate,
+        endDate,
+        venue: data.venue ?? '',
+        totalCapacity: data.totalCapacity ?? 0,
+        multimedia: (data as any).multimedia ?? [],
+        category_id: data.category?.id ?? undefined,
+        ticketTypes: fixedTickets
+      })
+
+      setExistingImageUrl(photoUrl)
+      setImagePreview(photoUrl || '')
+      setSelectedTicketIndexes([]) // ✅ limpiar selección al cargar
+    } catch (err) {
+      showError(err, 'No se pudo cargar el evento')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
-    if (eventId) {
-      loadEvent()
+    if (eventId) loadEvent()
+    return () => {
+      if (imagePreview && imagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(imagePreview)
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId])
@@ -93,562 +165,655 @@ export default function EditEventPage() {
         setLoadingCategories(true)
         const response = await getCategories(true)
         setCategories(response.categories || [])
-      } catch (err) {
-        console.error('Error al cargar categorías:', err)
+      } catch {
         setCategories([])
       } finally {
         setLoadingCategories(false)
       }
     }
-
     loadCategories()
   }, [])
 
-  const loadEvent = async () => {
-    try {
-      setLoading(true)
-      const data = await EventService.getEventById(eventId)
-      setEvent(data)
-
-      setFormData({
-        title: data.title,
-        description: data.description || '',
-        startDate: data.startDate.substring(0, 16),
-        endDate: data.endDate.substring(0, 16),
-        venue: data.venue,
-        totalCapacity: data.totalCapacity,
-        multimedia: data.multimedia || [],
-        category_id: (data as any).categoryId || (data as any).category?.id || undefined
-      })
-    } catch (err: any) {
-      showError(err, 'Error al cargar el evento')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault()
-
-  setError(null)
-
-  if (!formData.title || !formData.venue || !formData.startDate || !formData.endDate) {
-    setError('Por favor completa todos los campos obligatorios')
-    return
-  }
-
-  if (formData.totalCapacity && formData.totalCapacity <= 0) {
-    setError('La capacidad debe ser mayor a 0')
-    return
-  }
-
-  try {
-    setSaving(true)
-
-    const payload: any = {
-      title: formData.title,
-      description: formData.description || undefined,
-      startDate: formData.startDate
-        ? new Date(formData.startDate).toISOString()
-        : undefined,
-      endDate: formData.endDate
-        ? new Date(formData.endDate).toISOString()
-        : undefined,
-      venue: formData.venue,
-      totalCapacity: formData.totalCapacity || undefined,
-      multimedia:
-        formData.multimedia && formData.multimedia.length > 0
-          ? formData.multimedia
-          : undefined,
-    }
-
-    // solo mandamos categoría si existe; la clave va como espera el backend
-    if (formData.category_id) {
-      payload.category_id = formData.category_id
-    }
-
-    await EventService.updateEvent(eventId, payload)
-
-    alert('Evento actualizado exitosamente')
-    router.push('/panel/my-events')
-  } catch (err: any) {
-    showError(err, 'Error al actualizar el evento')
-  } finally {
-    setSaving(false)
-  }
-}
   const handleStatusChange = async (newStatus: EventStatus) => {
-    const confirmMessages: Record<EventStatus, string> = {
-      DRAFT: '¿Regresar el evento a borrador?',
-      PUBLISHED: '¿Publicar este evento?',
-      CANCELLED: '¿Cancelar este evento?',
-      COMPLETED: '¿Marcar este evento como completado?'
-    }
-
-    if (!confirm(confirmMessages[newStatus])) return
+    if (!event) return
+    if (event.status === newStatus) return
 
     try {
-      switch (newStatus) {
-        case 'PUBLISHED':
-          await EventService.publishEvent(eventId)
-          break
-        case 'CANCELLED':
-          await EventService.cancelEvent(eventId)
-          break
-        case 'DRAFT':
-          await EventService.markEventAsDraft(eventId)
-          break
-        case 'COMPLETED':
-          await EventService.completeEvent(eventId)
-          break
-        default:
-          throw new Error('Acción de estado no soportada')
-      }
-      await loadEvent()
-      alert('Estado actualizado exitosamente')
-    } catch (err: any) {
-      showError(err, 'Error al actualizar el estado')
+      setStatusUpdating(true)
+      setError(null)
+      setSuccess(null)
+      const updatedEvent = await EventService.updateEventStatus(event.id, newStatus)
+      setEvent(prev => (prev ? { ...prev, status: updatedEvent.status } : prev))
+      setSuccess('Estado del evento actualizado correctamente.')
+    } catch (err) {
+      showError(err, 'No se pudo actualizar el estado del evento')
+    } finally {
+      setStatusUpdating(false)
     }
   }
 
-  const handleDeleteEvent = async () => {
-    if (!confirm('¿Estás seguro de eliminar este evento? Esta acción no se puede deshacer.')) {
+  const handleImageChange = (file: File | null) => {
+    if (imagePreview && imagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(imagePreview)
+    }
+
+    if (!file) {
+      setImageFile(null)
+      setImagePreview(existingImageUrl || '')
+      return
+    }
+
+    const url = URL.createObjectURL(file)
+    setImageFile(file)
+    setImagePreview(url)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+
+    if (!formData.title || !formData.venue || !formData.startDate || !formData.endDate) {
+      setError('Por favor completa todos los campos obligatorios')
+      return
+    }
+
+    if (formData.totalCapacity && formData.totalCapacity <= 0) {
+      setError('La capacidad debe ser mayor a 0')
+      return
+    }
+
+   // ✅ Validar que la suma de tickets no supere la capacidad
+    const totalTicketsConfigured = formData.ticketTypes.reduce(
+      (sum, t) => sum + (t.quantity_available ?? 0),
+      0
+    )
+
+    if (totalTicketsConfigured > formData.totalCapacity) {
+      const msg =
+        `La suma de las cantidades de todos los tipos de entrada (${totalTicketsConfigured}) ` +
+        `no puede superar la capacidad total del evento (${formData.totalCapacity}).`
+
+
+      //usamos el toast flotante
+      setTicketCapacityError(msg)
+      setTimeout(() => setTicketCapacityError(null), 3500)
+
       return
     }
 
     try {
+      setSaving(true)
+
+      const payload: EventUpdate = {
+        title: formData.title,
+        description: formData.description || undefined,
+        startDate: formData.startDate
+          ? new Date(formData.startDate).toISOString()
+          : undefined,
+        endDate: formData.endDate
+          ? new Date(formData.endDate).toISOString()
+          : undefined,
+        venue: formData.venue,
+        totalCapacity: formData.totalCapacity || undefined,
+        multimedia: formData.multimedia?.length ? formData.multimedia : undefined,
+        category_id: formData.category_id || undefined
+      }
+
+      // 1) Actualizar datos del evento
+      const updatedEvent = await EventService.updateEvent(eventId, payload)
+
+      // 2) Actualizar tipos de entrada en bloque
+      const ticketTypesPayload = formData.ticketTypes.map((t: any) => ({
+        id: t.id,                        // puede ser undefined para nuevos
+        name: t.name,
+        description: t.description || '',
+        price: Number(t.price) || 0,
+        quantity: Number(t.quantity_available) || 0,
+        maxPerPurchase:
+          t.max_purchase !== null && t.max_purchase !== undefined
+            ? Number(t.max_purchase)
+            : null
+      }))
+
+      await TicketTypeService.updateTicketTypesBatch(
+        eventId,
+        ticketTypesPayload
+      )
+
+      // 3) Subir imagen (si se cambió)
+      if (imageFile) {
+        try {
+          await EventService.uploadEventPhoto(updatedEvent.id, imageFile)
+        } catch (photoErr) {
+          console.error('Error al actualizar la foto del evento:', photoErr)
+        }
+      }
+
+      setEvent(prev => (prev ? { ...prev, ...updatedEvent } : prev))
+
+      router.push('/panel/my-events?updated=1')
+    } catch (err) {
+      showError(err, 'No se pudo actualizar el evento')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!eventId) return
+    const confirmDelete = window.confirm(
+      '¿Estás segura de que deseas eliminar este evento? Esta acción no se puede deshacer.'
+    )
+    if (!confirmDelete) return
+
+    try {
+      setError(null)
+      setSuccess(null)
+      setDeleting(true)
       await EventService.deleteEvent(eventId)
-      alert('Evento eliminado exitosamente')
-      router.push('/panel/my-events')
-    } catch (err: any) {
-      showError(err, 'Error al eliminar el evento')
+      router.push('/panel/my-events?deleted=1')
+    } catch (err) {
+      showError(err, 'No se pudo eliminar el evento')
+    } finally {
+      setDeleting(false)
     }
   }
 
-  const addImage = () => {
-    if (newImageUrl && formData.multimedia) {
-      setFormData({
-        ...formData,
-        multimedia: [...formData.multimedia, newImageUrl]
-      })
-      setNewImageUrl('')
-    }
+  // ✅ NUEVO: helpers para selección y eliminación masiva de tipos
+  const toggleTicketSelected = (index: number) => {
+    setSelectedTicketIndexes(prev =>
+      prev.includes(index)
+        ? prev.filter(i => i !== index)
+        : [...prev, index]
+    )
   }
 
-  const removeImage = (index: number) => {
-    if (formData.multimedia) {
-      setFormData({
-        ...formData,
-        multimedia: formData.multimedia.filter((_, i) => i !== index)
-      })
-    }
+  const handleDeleteSelectedTicketTypes = () => {
+    if (selectedTicketIndexes.length === 0) return
+
+    const confirmDelete = window.confirm(
+      '¿Eliminar los tipos de entrada seleccionados? Esta acción no se puede deshacer.'
+    )
+    if (!confirmDelete) return
+
+    setFormData(prev => ({
+      ...prev,
+      ticketTypes: prev.ticketTypes.filter((_, i) => !selectedTicketIndexes.includes(i))
+    }))
+    setSelectedTicketIndexes([])
   }
 
   if (loading) {
-    return (
-      <Container>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Cargando evento...</p>
-          </div>
-        </div>
-      </Container>
-    )
+    return <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100" />
   }
 
   if (!event) {
-    return (
-      <Container>
-        <div className="text-center py-12">
-          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Evento no encontrado</h2>
-          <Button onClick={() => router.push('/panel/my-events')} className="mt-4">
-            Volver a eventos
-          </Button>
-        </div>
-      </Container>
-    )
-  }
-
-  const getStatusBadgeColor = (status: EventStatus) => {
-    switch (status) {
-      case 'PUBLISHED':
-        return 'bg-green-100 text-green-800 border-green-200'
-      case 'CANCELLED':
-        return 'bg-red-100 text-red-800 border-red-200'
-      case 'COMPLETED':
-        return 'bg-blue-100 text-blue-800 border-blue-200'
-      case 'DRAFT':
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200'
-    }
-  }
-
-  const getStatusText = (status: EventStatus) => {
-    switch (status) {
-      case 'PUBLISHED':
-        return 'Publicado'
-      case 'CANCELLED':
-        return 'Cancelado'
-      case 'COMPLETED':
-        return 'Completado'
-      case 'DRAFT':
-      default:
-        return 'Borrador'
-    }
+    return <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100" />
   }
 
   return (
-    <Container>
-      <div className="max-w-4xl mx-auto py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <Button
-            variant="outline"
-            onClick={() => router.back()}
-            className="mb-4"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Volver
-          </Button>
-
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Editar Evento</h1>
-              <p className="text-gray-600">Actualiza la información de tu evento</p>
-            </div>
-
-            <div className={`px-3 py-1 rounded-full text-sm border ${getStatusBadgeColor(event.status)}`}>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-current"></span>
-                <span className="font-medium">{getStatusText(event.status)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Estado y acciones rápidas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div className="bg-white rounded-xl border-2 border-gray-100 p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">Estado del evento</h3>
-            <p className="text-xs text-gray-500 mb-3">
-              Controla la visibilidad y disponibilidad del evento.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant={event.status === 'DRAFT' ? 'primary' : 'outline'}
-                onClick={() => handleStatusChange('DRAFT')}
-              >
-                <Edit3 className="w-4 h-4 mr-1" />
-                Borrador
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={event.status === 'PUBLISHED' ? 'primary' : 'outline'}
-                onClick={() => handleStatusChange('PUBLISHED')}
-              >
-                <Eye className="w-4 h-4 mr-1" />
-                Publicar
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={event.status === 'CANCELLED' ? 'destructive' : 'outline'}
-                onClick={() => handleStatusChange('CANCELLED')}
-              >
-                <Ban className="w-4 h-4 mr-1" />
-                Cancelar
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={event.status === 'COMPLETED' ? 'success' : 'outline'}
-                onClick={() => handleStatusChange('COMPLETED')}
-              >
-                <CheckCircle className="w-4 h-4 mr-1" />
-                Finalizado
-              </Button>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border-2 border-gray-100 p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">Resumen rápido</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Capacidad total:</span>
-                <span className="font-medium text-gray-900">{event.totalCapacity}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Tickets disponibles:</span>
-                <span className="font-medium text-gray-900">{event.availableTickets}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Multimedia cargada:</span>
-                <span className="font-medium text-gray-900">
-                  {formData.multimedia ? formData.multimedia.length : 0}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Error global */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <p className="text-red-800 text-sm">{error}</p>
-          </div>
-        )}
-
-        {/* Formulario */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="bg-white rounded-xl border-2 border-gray-100 p-6 space-y-6">
-            {/* Título */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Título del evento *
-              </label>
-              <Input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="Ej: Concierto de Rock 2024"
-                required
-              />
-            </div>
-
-            {/* Descripción */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Descripción
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Describe tu evento..."
-                rows={4}
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Categoría */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Categoría
-              </label>
-              <Select
-                value={formData.category_id || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    category_id: e.target.value || undefined,
-                  })
-                }
-                disabled={loadingCategories}
-              >
-                <option value="">
-                  {loadingCategories ? 'Cargando categorías...' : 'Sin categoría'}
-                </option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.icon} {cat.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            {/* Fechas */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <main className="flex-grow">
+        <Container className="py-8 max-w-5xl">
+          <div className="max-w-4xl mx-auto">
+            {/* HEADER */}
+            <div className="mb-6 flex items-center justify-between">
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Fecha y hora de inicio *
-                </label>
-                <Input
-                  type="datetime-local"
-                  value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Fecha y hora de fin *
-                </label>
-                <Input
-                  type="datetime-local"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  required
-                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  onClick={() => router.back()}
+                  className="mb-3"
+                >
+                  <ArrowLeft size={16} className="mr-2" />
+                  Volver
+                </Button>
+                <h1 className="text-3xl font-bold text-gray-900">Editar Evento</h1>
+                <p className="text-sm text-gray-600 mt-1">
+                  Actualiza la información de tu evento y los tipos de entrada
+                </p>
               </div>
             </div>
 
-            {/* Ubicación */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                Ubicación *
-              </label>
-              <Input
-                type="text"
-                value={formData.venue}
-                onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
-                placeholder="Ej: Estadio Nacional, Lima"
-                required
-              />
-            </div>
+            {error && (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
+            )}
 
-            {/* Capacidad */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                Capacidad total *
-              </label>
-              <Input
-                type="number"
-                min="1"
-                value={formData.totalCapacity}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    totalCapacity: parseInt(e.target.value || '0', 10),
-                  })
-                }
-                placeholder="1000"
-                required
-              />
-              <p className="text-sm text-gray-500 mt-1">
-                Tickets disponibles: {event.availableTickets}
-              </p>
-            </div>
+            {success && (
+              <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                {success}
+              </div>
+            )}
 
-            {/* Multimedia */}
-            <div className="border-t pt-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Contenido visual</h3>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* DETALLES DEL EVENTO */}
+              <Card variant="default" className="shadow-lg">
+                <CardHeader className="bg-gradient-to-r from-primary-50 to-blue-50">
+                  <CardTitle className="text-2xl flex items-center gap-2">
+                    <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-600 text-white text-sm font-bold">
+                      1
+                    </span>
+                    Detalles del Evento
+                  </CardTitle>
+                  <p className="text-gray-600 mt-2 text-sm">
+                    Información básica sobre tu evento
+                  </p>
+                </CardHeader>
+                <CardContent className="p-6 space-y-6">
+                  {/* Estado del evento */}
+                  <div className="border-t pt-6 mt-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      Estado del Evento
+                    </h3>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Selecciona el estado actual del evento.
+                    </p>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Imagen principal si existe */}
-                <div className="md:col-span-1">
-                  <div className="border-2 border-dashed border-gray-200 rounded-lg p-3 flex flex-col items-center justify-center text-center h-full">
-                    <ImageIcon className="w-8 h-8 text-gray-400 mb-2" />
-                    <p className="text-sm font-medium text-gray-700">Imagen principal</p>
-                    {event && (event as any).photoUrl && (
-                      <img
-                        src={(event as any).photoUrl}
-                        alt={event.title}
-                        className="mt-2 w-full h-32 object-cover rounded-md"
-                      />
+                    <div className="flex flex-wrap gap-3">
+                      {STATUS_OPTIONS.map((opt) => {
+                        const isActive = event.status === opt.value
+                        return (
+                          <Button
+                            key={opt.value}
+                            type="button"
+                            variant={isActive ? 'primary' : 'outline'}
+                            size="sm"
+                            className={
+                              'rounded-full px-4 ' +
+                              (isActive ? 'shadow-sm' : 'border-gray-300 text-gray-700')
+                            }
+                            onClick={() => handleStatusChange(opt.value)}
+                            disabled={statusUpdating || saving || deleting}
+                          >
+                            {opt.label}
+                          </Button>
+                        )
+                      })}
+                    </div>
+
+                    {statusUpdating && (
+                      <p className="mt-2 text-xs text-gray-500">
+                        Actualizando estado del evento...
+                      </p>
                     )}
                   </div>
-                </div>
 
-                {/* URLs multimedia extra */}
-                <div className="md:col-span-2 space-y-3">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                      <ImageIcon className="w-4 h-4" />
-                      URLs de imágenes / videos
-                    </label>
-                    <div className="space-y-2">
-                      {formData.multimedia && formData.multimedia.length > 0 ? (
-                        formData.multimedia.map((url, index) => (
-                          <div key={index} className="flex items-center gap-2">
-                            <Input
-                              type="url"
-                              value={url}
-                              onChange={(e) => {
-                                const newMultimedia = [...(formData.multimedia || [])]
-                                newMultimedia[index] = e.target.value
-                                setFormData({ ...formData, multimedia: newMultimedia })
-                              }}
-                              placeholder="https://ejemplo.com/imagen.jpg"
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeImage(index)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-xs text-gray-500">
-                          Aún no has agregado contenido multimedia adicional.
-                        </p>
-                      )}
+                  {/* Campos del evento */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Input
+                      label="Nombre del Evento"
+                      placeholder="Ej: Concierto de Rock"
+                      value={formData.title}
+                      onChange={(e) =>
+                        setFormData({ ...formData, title: e.target.value })
+                      }
+                      required
+                    />
+
+                    <Select
+                      label="Categoría"
+                      value={formData.category_id ?? ''}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          category_id: e.target.value || undefined
+                        })
+                      }
+                      disabled={loadingCategories || saving || deleting}
+                    >
+                      <option value="">
+                        {loadingCategories
+                          ? 'Cargando...'
+                          : 'Selecciona una categoría (opcional)'}
+                      </option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.icon} {cat.name}
+                        </option>
+                      ))}
+                    </Select>
+
+                    <div className="md:col-span-2">
+                      <label className="mb-1 block text-sm font-semibold text-gray-800">
+                        Descripción
+                      </label>
+                      <textarea
+                        className="w-full rounded-lg border border-gray-300 p-3 text-sm"
+                        placeholder="Describe tu evento en detalle..."
+                        rows={5}
+                        value={formData.description}
+                        onChange={(e) =>
+                          setFormData({ ...formData, description: e.target.value })
+                        }
+                        required
+                      />
                     </div>
+
+                    <Input
+                      label="Ubicación"
+                      placeholder="Ej: Estadio Nacional, Lima"
+                      value={formData.venue}
+                      onChange={(e) =>
+                        setFormData({ ...formData, venue: e.target.value })
+                      }
+                      required
+                    />
+
+                    <Input
+                      label="Capacidad Total"
+                      type="number"
+                      min="1"
+                      placeholder="Ej: 1000"
+                      value={formData.totalCapacity}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          totalCapacity: Number(e.target.value)
+                        })
+                      }
+                      required
+                    />
+
+                    <Input
+                      label="Fecha y Hora de Inicio"
+                      type="datetime-local"
+                      value={formData.startDate}
+                      onChange={(e) =>
+                        setFormData({ ...formData, startDate: e.target.value })
+                      }
+                      required
+                    />
+
+                    <Input
+                      label="Fecha y Hora de Fin"
+                      type="datetime-local"
+                      value={formData.endDate}
+                      onChange={(e) =>
+                        setFormData({ ...formData, endDate: e.target.value })
+                      }
+                      required
+                    />
                   </div>
 
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2">
-                      Agregar nueva URL
-                    </label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="url"
-                        value={newImageUrl}
-                        onChange={(e) => setNewImageUrl(e.target.value)}
-                        placeholder="https://ejemplo.com/video.mp4 o .gif"
-                      />
+                  {/* Imagen del evento */}
+                  <div className="border-t pt-6 mt-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                      Imagen del Evento
+                    </h3>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Esta imagen se mostrará como portada en la ficha del evento.
+                    </p>
+
+                    <div className="max-w-md">
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-white hover:border-primary-400 transition-colors">
+                        <label className="mb-2 block text-sm font-semibold text-gray-800">
+                          📸 Imagen principal
+                        </label>
+
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) =>
+                            handleImageChange(e.target.files ? e.target.files[0] : null)
+                          }
+                          disabled={saving || deleting}
+                          className="mb-2"
+                        />
+
+                        <p className="text-xs text-gray-500 mt-1">
+                          Formatos recomendados: JPG o PNG. Tamaño sugerido 1200x630px.
+                        </p>
+
+                        <div className="mt-3">
+                          {imagePreview ? (
+                            <div className="relative group">
+                              <img
+                                src={imagePreview}
+                                alt="Vista previa"
+                                className="w-full h-48 object-cover rounded-lg shadow-sm"
+                                onError={(e) => {
+                                  e.currentTarget.src =
+                                    'https://placehold.co/400x300/e5e7eb/6b7280?text=Vista+previa'
+                                  e.currentTarget.onerror = null
+                                }}
+                              />
+                              {imageFile && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  type="button"
+                                  onClick={() => handleImageChange(null)}
+                                  className="absolute top-2 right-2 bg-red-500 text-white hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity rounded-full px-2 py-1 text-xs"
+                                >
+                                  Quitar
+                                </Button>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center h-40 bg-gray-50 rounded-lg border border-gray-200">
+                              <span className="text-sm text-gray-400">
+                                No hay imagen seleccionada
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* TIPOS DE ENTRADA */}
+              <Card variant="default" className="shadow-lg mt-6">
+                <CardHeader className="bg-gradient-to-r from-primary-50 to-blue-50">
+                  <CardTitle className="text-2xl flex items-center gap-2">
+                    <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-600 text-white text-sm font-bold">
+                      2
+                    </span>
+                    Tipos de Entrada
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6 space-y-4">
+                  <p className="text-xs text-gray-500 mb-2">
+                    Edita los tipos de entrada existentes o agrega nuevos. Selecciona varios para eliminarlos en conjunto.
+                  </p>
+
+                  {formData.ticketTypes?.map((t: any, index: number) => (
+                    <div
+                      key={t.id ?? index}
+                      className="border border-gray-200 p-4 rounded-lg space-y-4 bg-gray-50"
+                    >
+                      {/* ✅ cabecera con checkbox de selección */}
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-gray-500">
+                          Tipo #{index + 1}
+                        </span>
+                        <label className="inline-flex items-center gap-2 text-xs text-gray-600">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-gray-300"
+                            checked={selectedTicketIndexes.includes(index)}
+                            onChange={() => toggleTicketSelected(index)}
+                          />
+                          Seleccionar para eliminar
+                        </label>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="mb-1 block text-xs font-semibold text-gray-700">
+                            Nombre del tipo
+                          </label>
+                          <Input
+                            placeholder="Ej: General, VIP"
+                            value={t.name}
+                            onChange={(e) => {
+                              const updated = [...formData.ticketTypes]
+                              updated[index].name = e.target.value
+                              setFormData({ ...formData, ticketTypes: updated })
+                            }}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-1 block text-xs font-semibold text-gray-700">
+                            Precio (S/.)
+                          </label>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            placeholder="Ej: 50.00"
+                            value={t.price ?? ''}
+                            onChange={(e) => {
+                              const updated = [...formData.ticketTypes]
+                              updated[index].price = Number(e.target.value)
+                              setFormData({ ...formData, ticketTypes: updated })
+                            }}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-1 block text-xs font-semibold text-gray-700">
+                            Máximo por compra
+                          </label>
+                          <Input
+                            type="number"
+                            min="1"
+                            placeholder="Ej: 4"
+                            value={t.max_purchase ?? ''}
+                            onChange={(e) => {
+                              const updated = [...formData.ticketTypes]
+                              updated[index].max_purchase = e.target.value
+                                ? Number(e.target.value)
+                                : null
+                              setFormData({ ...formData, ticketTypes: updated })
+                            }}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-1 block text-xs font-semibold text-gray-700">
+                            Cantidad disponible
+                          </label>
+                          <Input
+                            type="number"
+                            min="0"
+                            placeholder="Ej: 100"
+                            value={t.quantity_available ?? ''}
+                            onChange={(e) => {
+                              const updated = [...formData.ticketTypes]
+                              updated[index].quantity_available = Number(e.target.value)
+                              setFormData({ ...formData, ticketTypes: updated })
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="mb-1 block text-xs font-semibold text-gray-700">
+                          Descripción
+                        </label>
+                        <textarea
+                          placeholder="Descripción breve del tipo de entrada"
+                          className="w-full rounded-lg border border-gray-300 p-2 text-sm"
+                          value={t.description ?? ''}
+                          onChange={(e) => {
+                            const updated = [...formData.ticketTypes]
+                            updated[index].description = e.target.value
+                            setFormData({ ...formData, ticketTypes: updated })
+                          }}
+                        />
+                      </div>
+
+                      {/* ❌ aquí quitamos el botón "Eliminar tipo" individual */}
+                    </div>
+                  ))}
+
+                  {/* ✅ Botón de eliminación masiva */}
+                  {formData.ticketTypes.length > 0 && (
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-xs text-gray-500">
+                        Marca los tipos que desees eliminar y luego usa el botón.
+                      </p>
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="destructive"
                         size="sm"
-                        onClick={addImage}
+                        disabled={selectedTicketIndexes.length === 0}
+                        onClick={handleDeleteSelectedTicketTypes}
                       >
-                        + Agregar
+                        Eliminar tipos seleccionados
                       </Button>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      🎬 Videos, GIFs o imágenes adicionales del evento
-                    </p>
-                  </div>
+                  )}
+
+                  <Button
+                    variant="outline"
+                    type="button"
+                    onClick={() =>
+                      setFormData({
+                        ...formData,
+                        ticketTypes: [
+                          ...formData.ticketTypes,
+                          {
+                            id: undefined,
+                            name: '',
+                            price: 0,
+                            description: '',
+                            quantity_available: 0,
+                            max_purchase: null
+                          }
+                        ]
+                      })
+                    }
+                  >
+                    + Agregar nuevo tipo de entrada
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* ACCIONES */}
+              <div className="flex items-center justify-between pt-2">
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.back()}
+                    disabled={saving || deleting}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={handleDelete}
+                    disabled={saving || deleting}
+                  >
+                    {deleting ? 'Eliminando...' : 'Eliminar evento'}
+                  </Button>
                 </div>
+                <Button type="submit" variant="primary" disabled={saving || deleting}>
+                  <Save className="w-4 h-4 mr-2" />
+                  {saving ? 'Guardando...' : 'Guardar cambios'}
+                </Button>
               </div>
-            </div>
+            </form>
           </div>
+        </Container>
+       </main>
 
-          {/* Botones de acción */}
-          <div className="flex flex-wrap gap-3">
-            <Button
-              type="submit"
-              disabled={saving}
-              className="flex items-center gap-2"
-            >
-              <Save className="w-4 h-4" />
-              {saving ? 'Guardando...' : 'Guardar cambios'}
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.back()}
-            >
-              Cancelar
-            </Button>
-
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={handleDeleteEvent}
-              className="ml-auto"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Eliminar evento
-            </Button>
+      {/* 🔔 Toast flotante para error de capacidad de tickets */}
+      {ticketCapacityError && (
+        <div className="fixed bottom-4 right-4 z-50">
+          <div className="rounded-lg bg-red-600 text-white px-4 py-3 shadow-lg text-sm max-w-xs">
+            {ticketCapacityError}
           </div>
-        </form>
-      </div>
-    </Container>
+        </div>
+      )}
+    </div>
   )
 }

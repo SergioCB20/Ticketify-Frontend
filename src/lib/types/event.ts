@@ -70,6 +70,7 @@ export interface EventUpdate {
   multimedia?: string[]
   category_id?: string
   status?: EventStatus
+  ticketTypes?: any[]
 }
 
 // Representa la respuesta de lista del backend
