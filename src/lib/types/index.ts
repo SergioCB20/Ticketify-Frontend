@@ -43,6 +43,9 @@ export * from './purchase'
 // Tipos de categorías
 export * from './category'
 
+// Tipos de preferencias
+export * from './preferences'
+
 // Tipo específico para "Mis Tickets" (extendido)
 export interface MyTicket {
   id: string
