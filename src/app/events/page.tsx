@@ -115,7 +115,7 @@ export default function EventsPage() {
                       ? event.multimedia[0]
                       : 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800'
                   }
-                  category={event.categoryId || 'Sin categoría'}
+                  category={event.category?.name || 'Sin categoría'}
                   availableTickets={event.availableTickets}
                   onViewDetails={(id) => (window.location.href = `/events/${id}`)}
                 />
