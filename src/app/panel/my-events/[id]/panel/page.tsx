@@ -327,7 +327,7 @@ export default function EventPanelPage() {
                     size="sm"
                     className="w-full"
                     onClick={() =>
-                      router.push(`/panel/my-events/${eventId}/comunicaciones/nuevo`)
+                      router.push(`/panel/my-events/${eventId}/messages`)
                     }
                   >
                     Enviar información adicional
@@ -337,7 +337,7 @@ export default function EventPanelPage() {
                     variant="outline"
                     className="w-full"
                     onClick={() =>
-                      router.push(`/panel/my-events/${eventId}/comunicaciones`)
+                      router.push(`/panel/my-events/${eventId}/messages`)
                     }
                   >
                     Ver historial de mensajes

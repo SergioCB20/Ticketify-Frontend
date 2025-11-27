@@ -210,7 +210,7 @@ export default function OrganizerEventsPage() {
                   <div className="flex flex-col flex-grow p-5 md:p-6">
                     <CardHeader className="p-0 mb-2">
                       <CardTitle className="text-lg md:text-xl font-semibold text-gray-800 line-clamp-2 group-hover:text-primary-600 transition-colors">
-                        <Link href={`/organizer/events/${event.id}/dashboard`} className="focus:outline-none focus:ring-1 focus:ring-primary-300 rounded">
+                        <Link href={`/panel/my-events/${event.id}`} className="focus:outline-none focus:ring-1 focus:ring-primary-300 rounded">
                           {event.title}
                         </Link>
                       </CardTitle>
