@@ -412,5 +412,6 @@ export const EventService = {
     } catch (error) {
       throw handleApiError(error)
     }
-  }
+  },
+
 }
