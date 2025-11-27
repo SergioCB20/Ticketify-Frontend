@@ -40,13 +40,18 @@ export interface EventResponse {
   availableTickets: number
   isSoldOut: boolean
   organizerId: string
-  categoryId?: string
+  categoryId?: string   // ← Útil para selects de categoría
+  category?: {          // ← ESTA ES LA QUE TU UI NECESITA
+    id: string
+    name: string
+  }
   createdAt: string
   updatedAt: string
   minPrice?: number
   maxPrice?: number
   ticket_types?: any[]
 }
+
 
 // Respuesta optimizada para /my-events
 export interface OrganizerEventResponse {
