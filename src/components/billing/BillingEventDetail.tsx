@@ -15,6 +15,24 @@ interface BillingEventDetailProps {
   onSync: () => void
 }
 
+// Define esta función al inicio del componente BillingEventDetail
+const formatAmount = (amount: any): string => {
+  let numericAmount = 0;
+    
+  // Intenta convertir a número solo si el valor no es nulo/indefinido
+  if (amount !== null && amount !== undefined) {
+      // Intenta parsear a flotante, maneja strings y Decimal de Python
+      numericAmount = parseFloat(String(amount));
+        
+      // Si la conversión falla (es NaN), usa 0
+      if (isNaN(numericAmount)) {
+          numericAmount = 0;
+      }
+  }
+    
+  return numericAmount.toFixed(2);
+}
+
 const BillingEventDetail: React.FC<BillingEventDetailProps> = ({
   eventDetail,
   onBack,
@@ -271,7 +289,7 @@ const BillingEventDetail: React.FC<BillingEventDetailProps> = ({
           value={eventDetail.summary.accreditation.credited}
           subtitle={
             (eventDetail.summary.accreditation.pending || 0) > 0 // Asegura que se compara un número
-              ? `Pendiente: ${(eventDetail.summary.accreditation.pending || 0).toFixed(2)}` // Asegura que se llama a toFixed en un número
+              ? `Pendiente: ${formatAmount(eventDetail.summary.accreditation.pending)}` // Asegura que se llama a toFixed en un número
               : 'Todo acreditado'
           }
           color="primary"
