@@ -13,6 +13,7 @@ import { EventService } from '@/services/api/events'
 import { getCategories } from '@/services/api/categories'
 import type { Category } from '@/lib/types/event'
 import type { TicketTypeFormData } from '@/lib/types/ticketType'
+import { compressImage, isImageFile, validateFileSize } from '@/lib/utils/imageCompression'
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, any>(
   ({ label, error, className = '', required, ...props }, ref) => {
@@ -128,18 +129,38 @@ export default function CrearEventoPage() {
   const [ticketTypes, setTicketTypes] = useState<TicketTypeFormData[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // Manejo de imagen principal
-  const handleImagenPrincipalChange = (file: File | null) => {
+  // Manejo de imagen principal con compresión
+  const handleImagenPrincipalChange = async (file: File | null) => {
     if (file) {
-      setImagenPrincipalFile(file)
-      const url = URL.createObjectURL(file)
-      setPreviewUrl(url)
-      // Aquí podrías subir el archivo a un servidor y obtener la URL
-      // Por ahora, simulamos guardando el nombre del archivo
-      handleInputChange('imagenPrincipal', `url-de-${file.name}`)
+      // Validar que sea una imagen
+      if (!isImageFile(file)) {
+        setError('Por favor selecciona un archivo de imagen válido')
+        return
+      }
+
+      // Validar tamaño (máximo 5MB)
+      if (!validateFileSize(file, 5)) {
+        setError('La imagen no puede superar los 5MB')
+        return
+      }
+
+      try {
+        // Comprimir la imagen a 256x256 con calidad 60%
+        const compressedBase64 = await compressImage(file, 256, 0.6)
+        
+        setImagenPrincipalFile(file)
+        setPreviewUrl(compressedBase64)
+        handleInputChange('imagenPrincipal', compressedBase64)
+        
+        // Limpiar error si había
+        setError(null)
+      } catch (error) {
+        console.error('Error al comprimir imagen:', error)
+        setError('Error al procesar la imagen. Por favor intenta con otra imagen.')
+      }
     } else {
       setImagenPrincipalFile(null)
-      if (previewUrl) {
+      if (previewUrl && previewUrl.startsWith('blob:')) {
         URL.revokeObjectURL(previewUrl)
       }
       setPreviewUrl('')
@@ -520,13 +541,19 @@ export default function CrearEventoPage() {
                         <Input
                           type="file"
                           accept="image/*"
-                          onChange={(e) => handleImagenPrincipalChange(e.target.files ? e.target.files[0] : null)}
+                          onChange={(e) => {
+                            const file = e.target.files ? e.target.files[0] : null
+                            handleImagenPrincipalChange(file)
+                          }}
                           disabled={loading}
                           className="mb-2"
                         />
                         
                         <p className="text-xs text-gray-500 mt-1">
                           💡 Imagen destacada que se mostrará en la portada del evento
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          📏 La imagen se redimensionará a 256x256px y se optimizará (máx. 5MB)
                         </p>
                         
                         {/* Vista Previa de la Imagen Principal */}

@@ -32,7 +32,7 @@ export interface Event {
   venue: string
   totalCapacity: number
   status: EventStatus
-  multimedia: string[]
+  photoUrl: string
   organizerId: string
   category?: {          // ← ESTA ES LA QUE TU UI NECESITA
     id: string
