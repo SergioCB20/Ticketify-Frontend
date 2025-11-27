@@ -70,6 +70,34 @@ export class TicketTypeService {
   }
 
   /**
+   * Actualizar en bloque los tipos de entrada de un evento (crear / actualizar / eliminar)
+   */
+  static async updateTicketTypesBatch(
+    eventId: string,
+    ticketTypes: {
+      id?: string
+      name: string
+      description?: string
+      price: number
+      quantity: number
+      maxPerPurchase?: number | null
+    }[]
+  ): Promise<TicketType[]> {
+    try {
+      const response = await api.put<TicketType[]>(
+        `${BASE_URL}/event/${eventId}/batch`,
+        {
+          eventId,
+          ticketTypes
+        }
+      )
+      return response.data
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  }
+
+  /**
    * Eliminar un tipo de entrada
    */
   static async deleteTicketType(ticketTypeId: string): Promise<void> {
