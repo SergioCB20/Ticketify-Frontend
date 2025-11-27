@@ -46,7 +46,7 @@ export default function PromotionsPage() {
 
       const data = await EventService.getAllByUser(user.id)
       setEvents(data)
-      if (data.length === 0) toast('No hay eventos disponibles')
+      if (data.length === 0) toast('No hay eventos vigentes disponibles')
     } catch (err: any) {
       console.error('❌ Error al cargar eventos:', err)
       setError('Error al cargar eventos')

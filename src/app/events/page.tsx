@@ -38,12 +38,13 @@ export default function EventsPage() {
 
         const response = await EventService.search(filters, 1, 20)
         data = Array.isArray(response) ? response : response.events || []
+        console.log('Search filters applied:', filters)
       } else {
         // 🟢 Si no hay filtros, usa directamente los eventos activos
         const response = await EventService.getActiveEvents()
         data = Array.isArray(response) ? response : [response]
       }
-
+      console.log('Fetched events:', data)
       setEvents(data)
     } catch (error: any) {
       console.error('Error loading events:', error)
@@ -111,8 +112,8 @@ export default function EventsPage() {
                   location={event.venue}
                   price={event.minPrice ?? 0}
                   image={
-                    event.multimedia && event.multimedia.length > 0
-                      ? event.multimedia[0]
+                    event.photoUrl
+                      ? `http://localhost:8000${event.photoUrl}`
                       : 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800'
                   }
                   category={event.category?.name || 'Sin categoría'}

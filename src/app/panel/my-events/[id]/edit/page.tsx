@@ -13,6 +13,7 @@ import { EventService } from '@/services/api/events'
 import { TicketTypeService } from '@/services/api/ticketTypes'
 import type { EventDetail, EventUpdate, EventStatus } from '@/lib/types'
 import { Save, ArrowLeft } from 'lucide-react'
+import { compressImage, isImageFile, validateFileSize } from '@/lib/utils/imageCompression'
 
 type TicketTypeFormRow = {
   id?: string
@@ -192,7 +193,7 @@ export default function EditEventPage() {
     }
   }
 
-  const handleImageChange = (file: File | null) => {
+  const handleImageChange = async (file: File | null) => {
     if (imagePreview && imagePreview.startsWith('blob:')) {
       URL.revokeObjectURL(imagePreview)
     }
@@ -203,9 +204,31 @@ export default function EditEventPage() {
       return
     }
 
-    const url = URL.createObjectURL(file)
-    setImageFile(file)
-    setImagePreview(url)
+    // Validar que sea una imagen
+    if (!isImageFile(file)) {
+      setError('Por favor selecciona un archivo de imagen válido')
+      return
+    }
+
+    // Validar tamaño (máximo 5MB)
+    if (!validateFileSize(file, 5)) {
+      setError('La imagen no puede superar los 5MB')
+      return
+    }
+
+    try {
+      // Comprimir la imagen a 256x256 con calidad 60%
+      const compressedBase64 = await compressImage(file, 256, 0.6)
+      
+      setImageFile(file)
+      setImagePreview(compressedBase64)
+      
+      // Limpiar error si había
+      setError(null)
+    } catch (error) {
+      console.error('Error al comprimir imagen:', error)
+      setError('Error al procesar la imagen. Por favor intenta con otra imagen.')
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -564,7 +587,10 @@ export default function EditEventPage() {
                         />
 
                         <p className="text-xs text-gray-500 mt-1">
-                          Formatos recomendados: JPG o PNG. Tamaño sugerido 1200x630px.
+                          💡 Imagen destacada que se mostrará en la portada del evento
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          📏 La imagen se redimensionará a 256x256px y se optimizará (máx. 5MB)
                         </p>
 
                         <div className="mt-3">

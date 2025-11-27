@@ -132,6 +132,18 @@ export interface OrganizerEventPanelTicketStat {
   revenue: number
 }
 
+interface SearchFilters {
+  query?: string;
+  categories?: string;
+  min_price?: number;
+  max_price?: number;
+  start_date?: string;
+  end_date?: string;
+  location?: string;
+  venue?: string;
+  status?: string;
+}
+
 // ============================================================
 // EVENT SERVICE COMPLETO 
 // ============================================================
@@ -374,20 +386,28 @@ export const EventService = {
     }
   },
 
-  async search(searchTerm: string, page = 1, pageSize = 10) {
+  async search(filters: SearchFilters, page = 1, pageSize = 10) {
     try {
-      const { data } = await api.get('/events/search', {
-        params: { q: searchTerm, page, page_size: pageSize }
-      })
+      // 3. Combinamos los filtros con la paginación en un solo objeto params
+      const params = {
+        ...filters, // Esparce (spread) todos los filtros (query, status, etc.)
+        page,
+        page_size: pageSize
+      };
+
+      // Limpiamos claves undefined/null para no ensuciar la URL (opcional pero buena práctica)
+      Object.keys(params).forEach(key => (params as Record<string, any>)[key] === undefined && delete (params as Record<string, any>)[key]);
+
+      const { data } = await api.get('/events/search', { params })
       return data
     } catch (error) {
       throw handleApiError(error)
     }
-  },
-
+},
   async getAllByUser(userId: string) {
     try {
       const response = await api.get(`/events/by-organizer/${userId}`)
+      console.log('📦 EventService.getAllByUser - Response:', response)
       return response.data
     } catch (error) {
       throw handleApiError(error)
