@@ -245,7 +245,7 @@ export default function OrganizerEventsPage() {
                           Editar
                         </Button>
                       </Link>
-                      <Link href={`/organizer/events/${event.id}`} className="w-full sm:w-auto flex-1" passHref>
+                      <Link href={`/panel/my-events/${event.id}/panel`} className="w-full sm:w-auto flex-1" passHref>
                         <Button variant="secondary" size="sm" fullWidth className="font-medium rounded-lg">
                           Ver Panel
                         </Button>

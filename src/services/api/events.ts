@@ -1,4 +1,5 @@
 import api, { handleApiError } from '../../lib/api'
+import type { EventStatus } from '@/lib/types'
 
 // ============================================================
 // Tipos base
@@ -39,13 +40,18 @@ export interface EventResponse {
   availableTickets: number
   isSoldOut: boolean
   organizerId: string
-  categoryId?: string
+  categoryId?: string   // ← Útil para selects de categoría
+  category?: {          // ← ESTA ES LA QUE TU UI NECESITA
+    id: string
+    name: string
+  }
   createdAt: string
   updatedAt: string
   minPrice?: number
   maxPrice?: number
   ticket_types?: any[]
 }
+
 
 // Respuesta optimizada para /my-events
 export interface OrganizerEventResponse {
@@ -71,9 +77,63 @@ export interface EventWithTicketTypesData {
     salesEndDate?: string
   }>
 }
+//Payload para actualizar tipos de ticket (incluye id opcional)
+export interface TicketTypeUpdatePayload {
+  id?: string
+  name: string
+  description?: string
+  price: number
+  quantity: number
+  maxPerPurchase?: number | null
+}
 
 // ============================================================
-// EVENT SERVICE COMPLETO → 100% compatible con tu frontend actual
+// Tipos para el PANEL del organizador
+// ============================================================
+export interface TicketStats {
+  id: string
+  name: string
+  price: number
+  total: number
+  sold: number
+  reserved: number
+  remaining: number
+  revenue: number
+}
+
+export interface BillingSummary {
+  totalRevenue: number
+  platformFees: number
+  netRevenue: number
+  totalTicketsSold: number
+  totalOrders: number
+}
+
+export interface CommunicationSummary {
+  totalAttendees: number
+  emailsSent: number
+  lastCampaignAt?: string | null
+}
+
+export interface OrganizerEventPanelResponse {
+  event: EventResponse
+  ticketStats: TicketStats[]
+  billing: BillingSummary
+  communications: CommunicationSummary
+}
+
+export interface OrganizerEventPanelTicketStat {
+  id: string
+  name: string
+  price: number
+  total: number
+  sold: number
+  remaining: number
+  revenue: number
+}
+
+// ============================================================
+// EVENT SERVICE COMPLETO 
 // ============================================================
 export const EventService = {
   // Crear evento simple
@@ -89,10 +149,8 @@ export const EventService = {
   // Crear evento + ticket types
   async createEventWithTicketTypes(data: EventWithTicketTypesData) {
     try {
-      // Crear el evento
       const event = await EventService.createEvent(data.event)
-      
-      // Crear los tipos de entrada en batch
+
       const response = await api.post<any[]>('/ticket-types/batch', {
         eventId: event.id,
         ticketTypes: data.ticketTypes
@@ -104,6 +162,17 @@ export const EventService = {
     }
   },
 
+  async updateTicketTypes(eventId: string, ticketTypes: TicketTypeUpdatePayload[]) {
+    try {
+      const { data } = await api.put(`/ticket-types/event/${eventId}/batch`, {
+        eventId,
+        ticketTypes,
+      })
+      return data
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  },
   // =======================
   // GETTERS
   // =======================
@@ -123,6 +192,66 @@ export const EventService = {
     try {
       const { data } = await api.get('/events/my-events')
       return data
+    } catch (error) {
+      throw handleApiError(error)
+    }
+  },
+
+  // Panel del evento (para "Ver Panel")
+  async getEventPanel(eventId: string): Promise<OrganizerEventPanelResponse> {
+    try {
+      const { data } = await api.get(`/events/${eventId}/panel`)
+
+      // Si el backend ya devuelve { event, ticketStats, ... }
+      if ((data as any).event) {
+        return data as OrganizerEventPanelResponse
+      }
+
+      // Si solo devuelve el evento plano, armamos un panel básico
+      const event = data as EventResponse
+
+      const rawTicketTypes: any[] = (event as any).ticket_types ?? []
+
+      const ticketStats: TicketStats[] = rawTicketTypes.map((t: any) => {
+        const sold = t.sold_quantity ?? t.sold ?? 0
+        const total =
+          t.quantity_available ?? t.quantity ?? 0
+        const remaining =
+          t.remaining_quantity ?? Math.max(total - sold, 0)
+        const price = t.price ?? 0
+        const revenue = t.total_revenue ?? sold * price
+
+        return {
+          id: t.id ?? String(t.name),
+          name: t.name,
+          price,
+          total,
+          sold,
+          reserved: 0,
+          remaining,
+          revenue
+        }
+      })
+
+      const totalRevenue = ticketStats.reduce((acc, t) => acc + (t.revenue ?? 0), 0)
+      const totalTicketsSold = ticketStats.reduce((acc, t) => acc + (t.sold ?? 0), 0)
+
+      return {
+        event,
+        ticketStats,
+        billing: {
+          totalRevenue,
+          platformFees: 0,
+          netRevenue: totalRevenue,
+          totalTicketsSold,
+          totalOrders: totalTicketsSold
+        },
+        communications: {
+          totalAttendees: totalTicketsSold,
+          emailsSent: 0,
+          lastCampaignAt: null
+        }
+      }
     } catch (error) {
       throw handleApiError(error)
     }
@@ -149,14 +278,14 @@ export const EventService = {
     }
   },
 
-  async uploadEventPhoto (eventId: string, photoFile: File): Promise<EventResponse> {
+  async uploadEventPhoto(eventId: string, photoFile: File): Promise<EventResponse> {
     try {
       const formData = new FormData()
       formData.append('photo', photoFile)
-      
+
       const response = await api.post<EventResponse>(`/events/${eventId}/upload-photo`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': 'multipart/form-data'
         }
       })
       return response.data
@@ -211,14 +340,14 @@ export const EventService = {
       throw handleApiError(error)
     }
   },
+
   // =======================
   // DELETE EVENT
   // =======================
-    async deleteEvent(eventId: string) {
-      // 👇 SIN handleApiError, dejamos que axios lance el error tal cual
-      const response = await api.delete(`/events/${eventId}`)
-      return response.data
-    },
+  async deleteEvent(eventId: string) {
+    const response = await api.delete(`/events/${eventId}`)
+    return response.data
+  },
 
   // =======================
   // EXTRAS OPCIONALES DEL MAIN
@@ -264,5 +393,4 @@ export const EventService = {
       throw handleApiError(error)
     }
   }
-
 }

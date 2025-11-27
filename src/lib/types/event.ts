@@ -34,6 +34,10 @@ export interface Event {
   status: EventStatus
   multimedia: string[]
   organizerId: string
+  category?: {          // ← ESTA ES LA QUE TU UI NECESITA
+    id: string
+    name: string
+  }
   availableTickets: number
   isSoldOut: boolean
   createdAt: string
@@ -70,6 +74,7 @@ export interface EventUpdate {
   multimedia?: string[]
   category_id?: string
   status?: EventStatus
+  ticketTypes?: any[]
 }
 
 // Representa la respuesta de lista del backend
