@@ -19,7 +19,7 @@ export function useAuth() {
     syncAuthState()
   }, [session, status])
 
-  const syncAuthState = () => {
+  const syncAuthState = async () => {
     console.log('useAuth - Syncing state, NextAuth status:', status)
     
     // Primero revisar localStorage (login tradicional)
@@ -28,16 +28,38 @@ export function useAuth() {
     
     console.log('useAuth - localStorage check:', {
       hasToken: !!localToken,
-      hasUser: !!localUser
+      hasUser: !!localUser,
+      userComplete: localUser ? !!(localUser.firstName && localUser.lastName) : false
     })
 
     // Si hay datos en localStorage (login tradicional), usarlos
     if (localToken && localUser) {
-      console.log('useAuth - Using traditional login from localStorage')
-      setUser(localUser)
-      setIsAuthenticated(true)
-      setLoading(false)
-      return
+      // Verificar si el usuario está completo
+      if (localUser.firstName && localUser.lastName) {
+        console.log('useAuth - Using complete user from localStorage')
+        setUser(localUser)
+        setIsAuthenticated(true)
+        setLoading(false)
+        return
+      } else {
+        // Si el usuario está incompleto, intentar obtener del backend
+        console.log('useAuth - User incomplete, fetching from backend')
+        try {
+          const fullUser = await AuthService.getProfile()
+          StorageService.setUser(fullUser)
+          setUser(fullUser)
+          setIsAuthenticated(true)
+          setLoading(false)
+          return
+        } catch (error) {
+          console.error('useAuth - Error fetching profile:', error)
+          // Si falla, usar el usuario incompleto de todos modos
+          setUser(localUser)
+          setIsAuthenticated(true)
+          setLoading(false)
+          return
+        }
+      }
     }
     
     // Si NextAuth tiene una sesión activa (OAuth)
@@ -47,26 +69,26 @@ export function useAuth() {
       // Obtener el usuario completo del localStorage (ya debería estar por AuthSyncProvider)
       const fullUser = StorageService.getUser<User>()
       
-      if (fullUser) {
-        console.log('useAuth - Full user loaded from localStorage')
+      if (fullUser && fullUser.firstName && fullUser.lastName) {
+        console.log('useAuth - Complete user loaded from localStorage')
         setUser(fullUser)
         setIsAuthenticated(true)
+        setLoading(false)
+        return
       } else {
-        // Si no hay usuario en localStorage, crear uno básico de la sesión
-        console.log('useAuth - Creating basic user from NextAuth session')
-        const basicUser: Partial<User> = {
-          id: session.user.id,
-          email: session.user.email,
-          firstName: session.user.firstName?.split(' ')[0] || '',
-          lastName: session.user.lastName?.split(' ').slice(1).join(' ') || '',
-          profilePhoto: session.user.profilePhoto || '' ,
-        }
-        setUser(basicUser as User)
-        setIsAuthenticated(true)
+        // Si no hay usuario completo, el AuthSyncProvider debería estar obteniéndolo
+        // Esperar un momento y revisar de nuevo
+        console.log('useAuth - Waiting for AuthSyncProvider to load complete user...')
+        setTimeout(() => {
+          const retryUser = StorageService.getUser<User>()
+          if (retryUser && retryUser.firstName) {
+            setUser(retryUser)
+            setIsAuthenticated(true)
+          }
+          setLoading(false)
+        }, 500)
+        return
       }
-      
-      setLoading(false)
-      return
     }
 
     // Si no hay sesión de NextAuth ni localStorage

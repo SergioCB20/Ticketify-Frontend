@@ -65,6 +65,7 @@ export class AuthService {
       console.log('📦 AuthService.loginWithGoogle - Backend response:', response.data)
 
       const { user, accessToken, refreshToken } = response.data
+      console.log('👤 AuthService.loginWithGoogle - User data:', user)
 
       // Guardar tokens y usuario en localStorage
       StorageService.setAccessToken(accessToken)

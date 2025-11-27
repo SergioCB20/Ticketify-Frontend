@@ -81,14 +81,11 @@ export class StorageService {
   // USER ------------------------------
   static setUser(user: any): void {
     try {
+      console.log('👤 StorageService - Setting user:', user)
       if (isLocalStorageAvailable()) {
         const userString = JSON.stringify(user)
         localStorage.setItem(USER_KEY, userString)
-        console.log('✅ StorageService - User saved:', {
-          id: user.id,
-          email: user.email,
-          roles: user.roles
-        })
+        console.log('✅ StorageService - User saved:', userString)
       }
     } catch (error) {
       console.error('❌ Error setting user:', error)

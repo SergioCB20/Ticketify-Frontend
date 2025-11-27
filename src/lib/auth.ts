@@ -11,7 +11,7 @@ let googleAuthData: { accessToken: string; refreshToken: string; user: User } | 
 // Extendemos los tipos de NextAuth para incluir nuestros campos personalizados
 declare module 'next-auth' {
   interface Session {
-    user: User// ✅ todo el usuario menos la foto
+    user: Omit<User, 'profilePhoto'> // ✅ Usuario SIN foto de perfil (es muy grande para cookies)
     accessToken: string
     refreshToken: string
     error?: string
@@ -24,6 +24,12 @@ declare module 'next-auth' {
     accessTokenExpires: number
     error?: string
   }
+}
+
+// Helper para remover la foto de perfil del usuario
+const removeProfilePhoto = (user: User): Omit<User, 'profilePhoto'> => {
+  const { profilePhoto, ...userWithoutPhoto } = user
+  return userWithoutPhoto
 }
 
 export const authOptions: NextAuthOptions = {
@@ -45,8 +51,10 @@ export const authOptions: NextAuthOptions = {
           })
 
           if (authResponse.user) {
+            // ✅ Remover foto antes de retornar
+            const userWithoutPhoto = removeProfilePhoto(authResponse.user)
             return {
-              ...authResponse.user,
+              ...userWithoutPhoto,
               accessToken: authResponse.accessToken,
               refreshToken: authResponse.refreshToken,
             }
@@ -108,13 +116,15 @@ export const authOptions: NextAuthOptions = {
 
         try {
           const data = await AuthService.loginWithGoogle(googleUser)
+          
+          // ✅ Guardar SIN la foto de perfil en googleAuthData
           googleAuthData = {
             accessToken: data.accessToken,
             refreshToken: data.refreshToken,
-            user: data.user,
+            user: data.user, // La foto se guardará en localStorage por AuthService, no en cookies
           }
 
-          console.log('🔹 Respuesta del backend en loginWithGoogle:', data)
+          console.log('🔹 Respuesta del backend en loginWithGoogle (foto excluida de cookies)')
 
           return true
         } catch (error: any) {
@@ -135,58 +145,64 @@ export const authOptions: NextAuthOptions = {
     },
 
     async jwt({ token, user, account }) {
-  // ✅ Si tenemos datos de GoogleAuth listos, los usamos directamente
-  if (googleAuthData) {
-    token.accessToken = googleAuthData.accessToken
-    token.refreshToken = googleAuthData.refreshToken
-    token.user = googleAuthData.user
-    googleAuthData = null // limpiamos
-    return token
-  }
+      // ✅ Si tenemos datos de GoogleAuth listos, los usamos directamente
+      if (googleAuthData) {
+        // ✅ IMPORTANTE: Remover la foto antes de guardar en el token
+        const userWithoutPhoto = removeProfilePhoto(googleAuthData.user)
+        
+        token.accessToken = googleAuthData.accessToken
+        token.refreshToken = googleAuthData.refreshToken
+        token.user = userWithoutPhoto // ✅ SIN foto de perfil
+        token.accessTokenExpires = Date.now() + 24 * 60 * 60 * 1000
+        
+        googleAuthData = null // limpiamos
+        return token
+      }
 
-  // 🔹 Login con credenciales
-  if (account && account.provider === 'credentials' && user) {
-    const { accessToken, refreshToken, ...safeUser } = user as any
-    return {
-      user: safeUser,
-      accessToken,
-      refreshToken,
-      accessTokenExpires: Date.now() + 24 * 60 * 60 * 1000,
-    }
-  }
+      // 🔹 Login con credenciales
+      if (account && account.provider === 'credentials' && user) {
+        const { accessToken, refreshToken, profilePhoto, ...safeUser } = user as any
+        // ✅ Explícitamente excluimos profilePhoto
+        return {
+          user: safeUser,
+          accessToken,
+          refreshToken,
+          accessTokenExpires: Date.now() + 24 * 60 * 60 * 1000,
+        }
+      }
 
-  // 🔹 Si ya existe un token válido, lo mantenemos
-  if (Date.now() < (token as any).accessTokenExpires) return token
+      // 🔹 Si ya existe un token válido, lo mantenemos
+      if (Date.now() < (token as any).accessTokenExpires) return token
 
-  // 🔹 Token expirado → renovar
-  try {
-    const refreshedTokens = await AuthService.refreshToken((token as any).refreshToken)
+      // 🔹 Token expirado → renovar
+      try {
+        const refreshedTokens = await AuthService.refreshToken((token as any).refreshToken)
 
-    let safeUser = token.user
-    if (refreshedTokens.user) {
-      const { profilePhoto, ...rest } = refreshedTokens.user
-      safeUser = rest
-    }
+        // ✅ Remover la foto si viene en la respuesta
+        let safeUser = token.user
+        if (refreshedTokens.user) {
+          safeUser = removeProfilePhoto(refreshedTokens.user)
+        }
 
-    return {
-      ...token,
-      user: safeUser,
-      accessToken: refreshedTokens.accessToken,
-      refreshToken: refreshedTokens.refreshToken,
-      accessTokenExpires: Date.now() + 24 * 60 * 60 * 1000,
-    }
+        return {
+          ...token,
+          user: safeUser,
+          accessToken: refreshedTokens.accessToken,
+          refreshToken: refreshedTokens.refreshToken,
+          accessTokenExpires: Date.now() + 24 * 60 * 60 * 1000,
+        }
 
-  } catch (error) {
-    console.error('Token refresh failed:', error)
-    return { ...token, error: 'RefreshAccessTokenError' }
-  }
-},
+      } catch (error) {
+        console.error('Token refresh failed:', error)
+        return { ...token, error: 'RefreshAccessTokenError' }
+      }
+    },
 
-    // 🔹 Lo que llega al frontend
+    // 🔹 Lo que llega al frontend en la sesión
     async session({ session, token }) {
       session.accessToken = token.accessToken as string
       session.refreshToken = token.refreshToken as string
-      session.user = token.user as User
+      session.user = token.user as Omit<User, 'profilePhoto'> // ✅ SIN foto
       return session
     },
   },
