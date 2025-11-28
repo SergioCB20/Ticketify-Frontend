@@ -61,6 +61,7 @@ export interface MyTicket {
     title: string
     startDate: string
     venue: string
+    photoUrl?: string  // ✅ Agregado para mostrar foto del evento
   }
   ticketType: {
     id: string
