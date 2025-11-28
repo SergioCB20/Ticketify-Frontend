@@ -23,11 +23,6 @@ import {
   FolderOpen
 } from 'lucide-react'
 
-/*
-  Inline fallback for AdminStatsGrid to avoid a missing-module compile error.
-  This renders a simple grid based on the keys/values of the provided stats object,
-  and avoids referencing fields that might differ between environments.
-*/
 function AdminStatsGrid({ stats }: { stats: AdminStats }) {
   const entries = Object.entries(stats as unknown as Record<string, any>)
   return (

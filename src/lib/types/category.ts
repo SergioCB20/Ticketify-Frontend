@@ -10,7 +10,11 @@ export interface Category {
   icon?: string
   color?: string
   imageUrl?: string
+  metaTitle?:string
+  metaDescription?:string
+  parentId?: string
   isFeatured: boolean
+  level?: number
   isActive: boolean
   sortOrder: number
   eventCount: number

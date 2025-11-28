@@ -188,7 +188,7 @@ export default function MyTicketsPage() {
             {filteredTickets.map((ticket) => (
               <MyTicketCard 
                 key={ticket.id} 
-                ticket={ticket}
+                ticket={ticket as any}
                 onTicketListed={loadTickets} 
               />
             ))}

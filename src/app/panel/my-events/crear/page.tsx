@@ -11,7 +11,7 @@ import { Select } from '@/components/ui/select'
 import { TicketTypeManager } from '@/components/events/ticket-type-manager'
 import { EventService } from '@/services/api/events'
 import { getCategories } from '@/services/api/categories'
-import type { Category } from '@/lib/types/event'
+import { Category } from '@/lib/types'
 import type { TicketTypeFormData } from '@/lib/types/ticketType'
 import { compressImage, isImageFile, validateFileSize } from '@/lib/utils/imageCompression'
 

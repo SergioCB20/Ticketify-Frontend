@@ -21,7 +21,31 @@ export interface MarketplaceListing {
   status: 'AVAILABLE' | 'SOLD' | 'CANCELLED'
   createdAt: string
   updatedAt: string
+  event: {
+    id: string
+    title: string
+    photoUrl: string
+    venue: string
+    startDate: string
+  }
+  originalPrice: number
+  title: string
 }
+
+export interface CreateListingData {
+  ticketId: string
+  price: number
+  photoUrl?: string
+}
+
+export interface MarketplaceFilters {
+  eventId?: string
+  priceMin?: number
+  priceMax?: number
+  status?: 'AVAILABLE' | 'SOLD' | 'CANCELLED'
+}
+
+export type ListingStatus = 'AVAILABLE' | 'SOLD' | 'CANCELLED'
 
 export interface CreateListingData {
   ticketId: string
@@ -35,4 +59,4 @@ export interface MarketplaceFilters {
   status?: 'AVAILABLE' | 'SOLD' | 'CANCELLED'
 }
 
-export type ListingStatus = 'AVAILABLE' | 'SOLD' | 'CANCELLED'
+

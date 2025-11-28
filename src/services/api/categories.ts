@@ -5,26 +5,7 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
-// Types
-export interface Category {
-  id: string
-  name: string
-  description: string | null
-  slug: string
-  icon: string | null
-  color: string | null
-  imageUrl: string | null
-  metaTitle: string | null
-  metaDescription: string | null
-  parentId: string | null
-  sortOrder: number
-  level: number
-  isActive: boolean
-  isFeatured: boolean
-  eventCount: number
-  createdAt: string
-  updatedAt: string
-}
+import type { Category } from '@/lib/types'
 
 export interface CategoriesResponse {
   categories: Category[]

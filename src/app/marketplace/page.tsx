@@ -177,7 +177,9 @@ export default function MarketplacePage() {
           {!loading && !error && listings.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {listings.map((listing) => {
-                const discount = getDiscountPercentage(listing.originalPrice, listing.price)
+                const discount = listing.originalPrice 
+                  ? getDiscountPercentage(listing.originalPrice, listing.price) 
+                  : 0
                 
                 return (
                   <Card 
@@ -261,7 +263,7 @@ export default function MarketplacePage() {
                             <p className="text-2xl font-bold text-primary-600">
                               S/ {listing.price.toFixed(2)}
                             </p>
-                            {listing.originalPrice > listing.price && (
+                            {listing.originalPrice && listing.originalPrice > listing.price && (
                               <p className="text-sm text-gray-500 line-through">
                                 S/ {listing.originalPrice.toFixed(2)}
                               </p>

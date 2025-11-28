@@ -1,27 +1,9 @@
+
 import type { OrganizerInfo } from './user'
+import type { Category } from './category'
 
 // Tipos de eventos
 export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED'
-
-export interface Category {
-  id: string
-  name: string
-  description: string | null
-  slug: string
-  icon: string | null
-  color: string | null
-  imageUrl: string | null
-  metaTitle: string | null
-  metaDescription: string | null
-  parentId: string | null
-  sortOrder: number
-  level: number
-  isActive: boolean
-  isFeatured: boolean
-  eventCount: number
-  createdAt: string
-  updatedAt: string
-}
 
 export interface Event {
   id: string

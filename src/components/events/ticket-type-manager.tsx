@@ -243,7 +243,7 @@ export function TicketTypeManager({ ticketTypes, onChange, errors = {} }: Ticket
                 placeholder="Descripción breve del tipo de entrada (beneficios, restricciones, etc.)"
                 rows={3}
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, description: e.target.value })}
               />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

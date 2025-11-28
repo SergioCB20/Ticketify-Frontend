@@ -33,7 +33,7 @@ export default function AuthSyncProvider({ children }: { children: React.ReactNo
           }
           
           // Verificar si ya existe un usuario completo en localStorage
-          const existingUser = StorageService.getUser()
+          const existingUser = StorageService.getUser() as { firstName?: string; lastName?: string } | null
           
           // Si no hay usuario O el usuario está incompleto, obtener del backend
           if (!existingUser || !existingUser.firstName || !existingUser.lastName) {
@@ -49,12 +49,13 @@ export default function AuthSyncProvider({ children }: { children: React.ReactNo
               // Si falla, al menos guardar lo básico de la sesión
               // pero solo si NO hay usuario existente
               if (!existingUser && session.user) {
+                const userAny = session.user as any
                 StorageService.setUser({
                   id: session.user.id,
                   email: session.user.email,
-                  firstName: session.user.firstName || session.user.name?.split(' ')[0] || '',
-                  lastName: session.user.lastName || session.user.name?.split(' ').slice(1).join(' ') || '',
-                  profilePhoto: session.user.profilePhoto || session.user.image,
+                  firstName: session.user.firstName || userAny.name?.split(' ')[0] || '',
+                  lastName: session.user.lastName || userAny.name?.split(' ').slice(1).join(' ') || '',
+                  profilePhoto: userAny.image,
                 })
               }
             }

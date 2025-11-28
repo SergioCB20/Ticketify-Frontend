@@ -3,8 +3,25 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import type { Category, CreateCategoryRequest, UpdateCategoryRequest } from '@/lib/types'
+import type { Category } from '@/lib/types'
 import { Plus, Edit2, Trash2, CheckCircle, XCircle, Image as ImageIcon, Calendar, Hash, Tag } from 'lucide-react'
+
+/**
+ * Local request types because '@/lib/types' does not export CreateCategoryRequest/UpdateCategoryRequest.
+ * These mirror the payload shape used by the AdminCategoriesService calls in this component.
+ */
+interface CreateCategoryRequest {
+  name: string
+  description?: string
+  slug: string
+  icon?: string
+  color?: string
+  imageUrl?: string
+  isFeatured?: boolean
+  sortOrder?: number
+}
+
+type UpdateCategoryRequest = CreateCategoryRequest
 import { AdminCategoriesService } from '@/services/api/adminCategories'
 import toast from 'react-hot-toast'
 

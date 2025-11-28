@@ -49,7 +49,6 @@ export function SellTicketModal({ open, onOpenChange, ticket, onSuccess }: SellT
       await MarketplaceService.createListing({
         ticketId: ticket.id,
         price: data.price,
-        description: data.description || `Entrada para ${ticket.eventName}`,
       })
       
       toast.success('¡Ticket publicado en el marketplace!')

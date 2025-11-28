@@ -23,7 +23,8 @@ export * from './ticket'
 export * from './marketplace'
 // Tipos de tipos de entrada (ticket types)
 export * from './ticketType'
-
+//
+export * from './category'
 // Tipos de respuesta de la API
 export interface ApiResponse<T = any> {
   success: boolean
@@ -39,9 +40,6 @@ export * from './api'
 
 // Tipos de compras y pagos
 export * from './purchase'
-
-// Tipos de categorías
-export * from './category'
 
 // Tipos de preferencias
 export * from './preferences'

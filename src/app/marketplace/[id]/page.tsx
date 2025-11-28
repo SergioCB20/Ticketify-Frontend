@@ -1,5 +1,4 @@
 'use client'
-
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Container } from '@/components/ui/container'
@@ -114,7 +113,7 @@ export default function MarketplaceCheckoutPage() {
     )
   }
 
-  const discountPercentage = listing.originalPrice > 0
+  const discountPercentage = listing.originalPrice && listing.originalPrice > 0
     ? Math.round(((listing.originalPrice - listing.price) / listing.originalPrice) * 100)
     : 0
 
@@ -134,7 +133,7 @@ export default function MarketplaceCheckoutPage() {
               </Button>
               <h1 className="text-xl font-bold text-gray-900">Comprar en Marketplace</h1>
             </div>
-            <Badge variant="secondary">Reventa Verificada</Badge>
+            <Badge variant="default">Reventa Verificada</Badge>
           </div>
         </Container>
       </div>
@@ -246,7 +245,7 @@ export default function MarketplaceCheckoutPage() {
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-sm text-gray-600">Precio de reventa</p>
-                    {listing.originalPrice > listing.price && (
+                    {listing.originalPrice && listing.originalPrice > listing.price && (
                       <p className="text-xs text-gray-500 line-through">S/ {listing.originalPrice.toFixed(2)}</p>
                     )}
                   </div>

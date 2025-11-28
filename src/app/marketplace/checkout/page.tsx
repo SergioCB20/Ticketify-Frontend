@@ -1,3 +1,4 @@
+"use client" 
 import React, { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Navbar } from '@/components/layout/navbar'
@@ -8,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { MarketplaceService } from '@/services/api/marketplace'
 import { CreditCard, Lock, CheckCircle, AlertCircle, Loader2, ShoppingCart } from 'lucide-react'
 import { toast } from 'react-hot-toast'
+import api from '@/lib/api'
 
 export default function MarketplaceCheckoutPage() {
   const router = useRouter()

@@ -31,7 +31,7 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, className }) => {
     : 0
 
   const imageUrl =
-    event.multimedia?.[0] ||
+    event.photoUrl ||
     'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&q=80'
 
   // ✅ Redirigir al checkout del marketplace
@@ -42,7 +42,7 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, className }) => {
       return
     }
 
-    if (user && !user.roles.includes('ATTENDEE')) {
+    if (user && !(user.roles ?? []).includes('ATTENDEE')) {
       toast.error('Solo los asistentes pueden comprar tickets.')
       return
     }
