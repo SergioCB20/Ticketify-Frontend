@@ -68,7 +68,7 @@ const CommissionBreakdown: React.FC<CommissionBreakdownProps> = ({
                 Comisión Mercado Pago
               </p>
               <p className="text-xs text-gray-500">
-                {formatPercentage(commissions.mercadoPago.percentage)}
+                {formatPercentage(Number(commissions.mercadoPago.percentage))}
               </p>
             </div>
           </div>
@@ -86,7 +86,7 @@ const CommissionBreakdown: React.FC<CommissionBreakdownProps> = ({
                 Comisión Plataforma
               </p>
               <p className="text-xs text-gray-500">
-                {formatPercentage(commissions.platform.percentage)}
+                {formatPercentage(Number(commissions.platform.percentage))}
               </p>
             </div>
           </div>
