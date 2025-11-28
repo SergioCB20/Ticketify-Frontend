@@ -14,7 +14,6 @@ import { TicketTypeService } from '@/services/api/ticketTypes'
 import type { EventDetail, EventUpdate, EventStatus } from '@/lib/types'
 import { Save, ArrowLeft } from 'lucide-react'
 import { compressImage, isImageFile, validateFileSize } from '@/lib/utils/imageCompression'
-import billingService, {  type EventBillingDetail} from '@/services/api/billing'
 
 type TicketTypeFormRow = {
   id?: string
