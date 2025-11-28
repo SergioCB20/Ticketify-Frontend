@@ -155,6 +155,7 @@ export function MyTicketCard({ ticket, onTicketListed }: MyTicketCardProps) {
           id: ticket.id,
           eventName: ticket.event.title,
           originalPrice: ticket.price,
+          eventPhoto: ticket.event.photoUrl,  // ✅ Pasar foto del evento
         }}
         onSuccess={onTicketListed}
       />

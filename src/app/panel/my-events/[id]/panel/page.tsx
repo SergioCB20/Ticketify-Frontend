@@ -5,9 +5,11 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { Container } from '@/components/ui/container'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { EventService, type OrganizerEventPanelResponse } from '@/services/api/events'
 import { ArrowLeft, Ticket, Wallet, Mail } from 'lucide-react'
 import type { EventStatus } from '@/lib/types'
+import { EventService, type OrganizerEventPanelResponse } from '@/services/api/events'
+import billingService, { type EventBillingDetail } from '@/services/api/billing'
+
 
 function getStatusLabel(status: EventStatus) {
   switch (status) {
@@ -34,6 +36,8 @@ export default function EventPanelPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showUpdatedToast, setShowUpdatedToast] = useState(false)
+  const [billingDetail, setBillingDetail] = useState<EventBillingDetail | null>(null)
+  const [billingLoading, setBillingLoading] = useState(false)
 
   // Lee ?updated=1 para mostrar el flotante
   useEffect(() => {
@@ -47,19 +51,35 @@ export default function EventPanelPage() {
     }
   }, [searchParams])
 
-  const loadData = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const res = await EventService.getEventPanel(eventId)
-      setData(res)
-    } catch (err: any) {
-      console.error(err)
-      setError('No se pudo cargar el panel del evento')
-    } finally {
-      setLoading(false)
+const loadData = async () => {
+  try {
+    setLoading(true)
+    setError(null)
+
+    // Pedimos panel de evento + facturación EN PARALELO
+    const [panelRes, billingRes] = await Promise.all([
+      EventService.getEventPanel(eventId),
+      billingService
+        .getEventBillingDetail(eventId)
+        .catch((err) => {
+          console.error('Error al cargar facturación para Mi Panel:', err)
+          return null
+        })
+    ])
+
+    setData(panelRes)
+
+    if (billingRes) {
+      setBillingDetail(billingRes)
     }
+  } catch (err: any) {
+    console.error(err)
+    setError('No se pudo cargar el panel del evento')
+  } finally {
+    setLoading(false)
+    setBillingLoading(false)
   }
+}
 
   useEffect(() => {
     if (eventId) loadData()
@@ -104,11 +124,6 @@ export default function EventPanelPage() {
     0
   )
 
-  const totalRevenue = ticketStats.reduce(
-    (sum, t) => sum + (t.revenue ?? 0),
-    0
-  )
-
   const totalTicketsConfigured = ticketStats.reduce(
     (sum, t) => sum + (t.total ?? 0),
     0
@@ -120,6 +135,25 @@ export default function EventPanelPage() {
       : 0
 
   const capacity = event.totalCapacity ?? 0
+
+    let totalRevenue = ticketStats.reduce(
+      (sum, t) => sum + (t.revenue ?? 0),
+      0
+    )
+    let platformFees = 0
+    let netRevenue = totalRevenue
+  
+    if (billingDetail?.summary) {
+    const s = billingDetail.summary
+
+    totalRevenue = Number(s.totalRevenue ?? totalRevenue)
+
+    const mpFees = Number(s.commissions?.mercadoPago?.amount ?? 0)
+    const platFees = Number(s.commissions?.platform?.amount ?? 0)
+    platformFees = Number(s.commissions?.total ?? mpFees + platFees)
+
+    netRevenue = Number(s.netAmount ?? (totalRevenue - platformFees))
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -187,7 +221,7 @@ export default function EventPanelPage() {
                   S/. {totalRevenue.toFixed(2)}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  Comisiones: S/. {billing.platformFees.toFixed(2)}
+                  Comisiones: S/. {platformFees.toFixed(2)}
                 </p>
               </CardContent>
             </Card>
@@ -277,13 +311,13 @@ export default function EventPanelPage() {
                 <div className="flex justify-between">
                   <span className="text-gray-500">Comisiones plataforma</span>
                   <span className="font-semibold">
-                    S/. {billing.platformFees.toFixed(2)}
+                    S/. {platformFees.toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between border-t pt-3 mt-2">
                   <span className="text-gray-700 font-semibold">Ingresos netos</span>
                   <span className="font-bold text-indigo-600">
-                    S/. {billing.netRevenue.toFixed(2)}
+                    S/. {netRevenue.toFixed(2)}
                   </span>
                 </div>
               </CardContent>
