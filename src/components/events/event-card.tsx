@@ -226,7 +226,7 @@ const EventCard: React.FC<EventCardProps> = ({
           className="flex-1"
           onClick={() => onViewDetails?.(id)}
         >
-          Ver detalles
+          Comprar
         </Button>
       </CardFooter>
     </Card>
