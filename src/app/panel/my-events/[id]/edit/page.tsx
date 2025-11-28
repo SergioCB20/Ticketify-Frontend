@@ -298,10 +298,9 @@ export default function EditEventPage() {
             : null
       }))
 
-      await TicketTypeService.updateTicketTypesBatch(
-        eventId,
-        ticketTypesPayload
-      )
+      if (ticketTypesPayload.length > 0) {
+        await TicketTypeService.updateTicketTypesBatch(eventId, ticketTypesPayload)
+      }
 
       // 3) Subir imagen (si se cambió)
       if (imageFile) {
