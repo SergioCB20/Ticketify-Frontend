@@ -7,8 +7,9 @@ import { Container } from '@/components/ui/container'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { MarketplaceService } from '@/services/api/marketplace'
+import { API_URL } from '@/lib/constants' // CORRECCIÓN: Importamos la URL base dinámica
 import type { MarketplaceListing } from '@/lib/types'
-import { Search, Loader2, TrendingUp, Calendar, MapPin, DollarSign, Filter, X } from 'lucide-react'
+import { Search, Loader2, TrendingUp, Calendar, MapPin, Filter, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
@@ -91,9 +92,8 @@ export default function MarketplacePage() {
       <Navbar />
 
       <main className="flex-grow">
-        {/* Hero Section - Mejorado */}
+        {/* Hero Section */}
         <section className="relative bg-gradient-to-br from-secondary-600 via-secondary-500 to-primary-500 text-white overflow-hidden">
-          {/* Efectos de fondo */}
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
             <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
@@ -114,7 +114,6 @@ export default function MarketplacePage() {
                 Transacciones 100% seguras con Ticketify.
               </p>
               
-              {/* Estadísticas rápidas */}
               <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto mt-8">
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
                   <p className="text-3xl font-bold">{total}</p>
@@ -135,11 +134,10 @@ export default function MarketplacePage() {
 
         <Container className="py-12 md:py-16">
           
-          {/* Barra de búsqueda y filtros - Mejorado */}
+          {/* Barra de búsqueda y filtros */}
           <div className="mb-8">
             <Card className="p-6 shadow-lg border-gray-200">
               <form onSubmit={handleSearch} className="space-y-4">
-                {/* Búsqueda principal */}
                 <div className="relative">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <Input
@@ -175,7 +173,6 @@ export default function MarketplacePage() {
                   </div>
                 </div>
 
-                {/* Filtros expandibles */}
                 {showFilters && (
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t">
                     <div>
@@ -239,7 +236,6 @@ export default function MarketplacePage() {
                 )}
               </form>
 
-              {/* Indicadores de filtros activos */}
               {hasActiveFilters && (
                 <div className="mt-4 flex flex-wrap gap-2">
                   {searchTerm && (
@@ -262,7 +258,6 @@ export default function MarketplacePage() {
             </Card>
           </div>
 
-          {/* Encabezado de resultados */}
           <div className="mb-6 flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">
@@ -278,7 +273,6 @@ export default function MarketplacePage() {
             </div>
           </div>
 
-          {/* Contenido: Grid de Listados */}
           {loading && (
             <div className="flex justify-center items-center h-64">
               <div className="text-center">
@@ -333,7 +327,36 @@ export default function MarketplacePage() {
           {!loading && !error && listings.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {listings.map((listing) => {
+                // CORRECCIÓN: Accedemos al evento de manera segura.
+                // A veces el evento está en la raíz, otras veces dentro del objeto ticket.
+                const event = (listing as any).event || listing.ticket?.event
+                
                 const discount = getDiscountPercentage(listing.originalPrice, listing.price)
+                
+                // CORRECCIÓN: Construimos la URL de la imagen usando API_URL
+                // Esto permite que funcione en localhost y en ngrok.
+                let imageUrl: string | null = null;
+                if (event?.photoUrl) {
+                    // 1. Extraemos solo la ruta (path) de la URL, ignorando el dominio que venga del backend
+                    let path = event.photoUrl;
+                    if (path.startsWith('http')) {
+                        try {
+                            const urlObj = new URL(path);
+                            path = urlObj.pathname + urlObj.search;
+                        } catch (e) {
+                            console.warn('Error al parsear URL de imagen:', path);
+                        }
+                    }
+                    
+                    // 2. Nos aseguramos de que el API_URL no tenga slash al final
+                    const base = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+                    
+                    // 3. Nos aseguramos de que el path tenga slash al inicio
+                    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+                    
+                    // 4. Construimos la nueva URL usando TU configuración de ngrok (API_URL)
+                    imageUrl = `${base}${cleanPath}`;
+                }
                 
                 return (
                   <Card 
@@ -343,10 +366,10 @@ export default function MarketplacePage() {
                   >
                     {/* Imagen del evento */}
                     <div className="relative h-48 bg-gradient-to-br from-primary-500 to-secondary-500 overflow-hidden">
-                      {listing.event?.photoUrl ? (
+                      {imageUrl ? (
                         <img
-                          src={`http://localhost:8000${listing.event.photoUrl}`}
-                          alt={listing.title}
+                          src={imageUrl}
+                          alt={event?.title || listing.title} // CORRECCIÓN: Usamos event?.title
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                         />
                       ) : (
@@ -365,7 +388,7 @@ export default function MarketplacePage() {
                         </div>
                       )}
                       
-                      {/* Badge de "Nuevo" para listings recientes */}
+                      {/* Badge de "Nuevo" */}
                       {new Date(listing.createdAt).getTime() > Date.now() - 24 * 60 * 60 * 1000 && (
                         <div className="absolute top-3 left-3">
                           <Badge variant="default" className="shadow-lg backdrop-blur-sm bg-primary-600">
@@ -379,20 +402,20 @@ export default function MarketplacePage() {
                     <div className="p-5">
                       {/* Título */}
                       <h3 className="font-bold text-lg text-gray-900 mb-3 line-clamp-2 group-hover:text-primary-600 transition-colors min-h-[3.5rem]">
-                        {listing.title}
+                        {event?.title || listing.title} {/* CORRECCIÓN: Usamos event?.title */}
                       </h3>
 
                       {/* Información del evento */}
                       <div className="space-y-2 mb-4 text-sm text-gray-600">
                         <div className="flex items-center gap-2">
                           <MapPin className="w-4 h-4 flex-shrink-0 text-gray-400" />
-                          <span className="line-clamp-1">{listing.event?.venue || 'Ubicación no especificada'}</span>
+                          <span className="line-clamp-1">{event?.venue || 'Ubicación no especificada'}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Calendar className="w-4 h-4 flex-shrink-0 text-gray-400" />
                           <span>
-                            {listing.event?.startDate
-                              ? new Date(listing.event.startDate).toLocaleDateString('es-PE', {
+                            {event?.startDate
+                              ? new Date(event.startDate).toLocaleDateString('es-PE', {
                                   weekday: 'short',
                                   month: 'short',
                                   day: 'numeric',
