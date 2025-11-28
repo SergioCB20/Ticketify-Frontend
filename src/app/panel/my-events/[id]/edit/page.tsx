@@ -14,6 +14,7 @@ import { TicketTypeService } from '@/services/api/ticketTypes'
 import type { EventDetail, EventUpdate, EventStatus } from '@/lib/types'
 import { Save, ArrowLeft } from 'lucide-react'
 import { compressImage, isImageFile, validateFileSize } from '@/lib/utils/imageCompression'
+import billingService, {  type EventBillingDetail} from '@/services/api/billing'
 
 type TicketTypeFormRow = {
   id?: string
@@ -298,10 +299,9 @@ export default function EditEventPage() {
             : null
       }))
 
-      await TicketTypeService.updateTicketTypesBatch(
-        eventId,
-        ticketTypesPayload
-      )
+      if (ticketTypesPayload.length > 0) {
+        await TicketTypeService.updateTicketTypesBatch(eventId, ticketTypesPayload)
+      }
 
       // 3) Subir imagen (si se cambió)
       if (imageFile) {
