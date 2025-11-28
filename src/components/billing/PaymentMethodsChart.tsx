@@ -55,7 +55,7 @@ const PaymentMethodsChart: React.FC<PaymentMethodsChartProps> = ({
                       {getPaymentMethodName(method.method)}
                     </span>
                     <span className="text-gray-600">
-                      {formatPercentage(method.percentage)}
+                      {formatPercentage(Number(method.percentage))}
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">

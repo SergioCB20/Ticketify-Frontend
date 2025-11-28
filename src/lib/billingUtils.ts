@@ -40,7 +40,7 @@ export const formatDateTime = (dateString: string): string => {
  * Formatea un porcentaje
  */
 export const formatPercentage = (value: number): string => {
-  return `${value.toFixed(1)}%`
+  return `${Number(value).toFixed(1)}%`
 }
 
 /**
